@@ -44,7 +44,10 @@ header {
   font-weight: 700;
   letter-spacing: .5px;
   color: var(--primary);
+  cursor: pointer;
+  user-select: none;
 }
+.logo:hover { color: var(--primary-h); }
 .version {
   font-size: 11px;
   color: var(--muted);
@@ -67,7 +70,7 @@ header {
   color: var(--muted);
   font-size: 13px;
   border-bottom: 2px solid transparent;
-  cursor: default;
+  cursor: pointer;
   transition: color .2s;
 }
 .step-indicator span {
@@ -92,6 +95,7 @@ header {
   background: #3a6a3a;
   color: #8fda8f;
 }
+.step-indicator:not(.active):hover { color: var(--text); }
 
 /* ── Step sections ───────────────────────────────────────────────── */
 .step { display: none; flex: 1; }

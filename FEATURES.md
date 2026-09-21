@@ -4,6 +4,15 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.10
+
+- **Clickable step indicators** — click any step badge in the nav to jump to it; step 2 requires an image to be loaded, step 3 requires a preview to have been generated
+- **Clickable logo** — clicking "molino" in the header reloads the page, starting a fresh session
+- **Version in download filenames** — STL and G-code files are now named `molino_vX.YY_carve.stl` / `molino_vX.YY_carve.gcode`
+- **G-code optimised** — removed one redundant move and one standalone feedrate line per row (saves ~2 lines per raster row); feedrate is now set inline on the first lateral G1 move after each plunge
+
+---
+
 ## v0.09
 
 - **Depth per pass** — new machining parameter (default 1 mm); the G-code generator now makes multiple raster passes, each limited to `N × depth_per_pass`, preventing tool breakage on deep cuts; pass count shown in the G-code header comment
