@@ -1,0 +1,111 @@
+import base64
+import json
+import math
+
+import numpy as np
+from fastapi import FastAPI, Form, HTTPException
+from fastapi.responses import FileResponse, Response
+from fastapi.staticfiles import StaticFiles
+
+from app.gcode_generator import generate_gcode
+from app.image_processor import process_image_to_heightmap
+from app.stl_generator import generate_stl
+
+app = FastAPI(title="Molino", version="0.01")
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+PREVIEW_RES = 200   # max heightmap dimension for 3D preview
+STL_RES = 300       # max heightmap dimension for STL export
+GCODE_MAX = 2000    # max steps per axis for G-code
+
+
+@app.get("/")
+async def index():
+    return FileResponse("app/static/index.html")
+
+
+def _decode_image(b64: str) -> bytes:
+    if "," in b64:
+        b64 = b64.split(",", 1)[1]
+    return base64.b64decode(b64)
+
+
+def _clamp_resolution(width_mm: float, height_mm: float, step_mm: float, max_steps: int):
+    cols = max(10, min(max_steps, int(width_mm / step_mm)))
+    rows = max(10, min(max_steps, int(height_mm / step_mm)))
+    return cols, rows
+
+
+@app.post("/api/preview")
+async def preview(
+    image_data: str = Form(...),
+    params: str = Form(...),
+):
+    p = json.loads(params)
+    img_bytes = _decode_image(image_data)
+
+    aspect = float(p.get("aspect", 1.0))
+    cols = PREVIEW_RES
+    rows = max(1, int(cols / aspect))
+    if rows > PREVIEW_RES:
+        rows = PREVIEW_RES
+        cols = max(1, int(rows * aspect))
+
+    hm = process_image_to_heightmap(img_bytes, cols, rows)
+
+    return {
+        "heightmap": hm.flatten().tolist(),
+        "rows": int(hm.shape[0]),
+        "cols": int(hm.shape[1]),
+    }
+
+
+@app.post("/api/download/stl")
+async def download_stl(
+    image_data: str = Form(...),
+    params: str = Form(...),
+):
+    p = json.loads(params)
+    img_bytes = _decode_image(image_data)
+
+    width_mm = float(p.get("width_mm", 100.0))
+    height_mm = float(p.get("height_mm", 100.0))
+
+    cols = min(STL_RES, max(50, int(width_mm / 0.5)))
+    rows = min(STL_RES, max(50, int(height_mm / 0.5)))
+
+    hm = process_image_to_heightmap(img_bytes, cols, rows)
+    stl_bytes = generate_stl(hm, p)
+
+    return Response(
+        content=stl_bytes,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=molino_carve.stl"},
+    )
+
+
+@app.post("/api/download/gcode")
+async def download_gcode(
+    image_data: str = Form(...),
+    params: str = Form(...),
+):
+    p = json.loads(params)
+    img_bytes = _decode_image(image_data)
+
+    width_mm = float(p.get("width_mm", 100.0))
+    height_mm = float(p.get("height_mm", 100.0))
+    step_over = float(p.get("step_over", 0.25))
+
+    cols, rows = _clamp_resolution(width_mm, height_mm, step_over, GCODE_MAX)
+    p["width_mm"] = width_mm
+    p["height_mm"] = height_mm
+
+    hm = process_image_to_heightmap(img_bytes, cols, rows)
+    gcode = generate_gcode(hm, p)
+
+    return Response(
+        content=gcode,
+        media_type="text/plain",
+        headers={"Content-Disposition": "attachment; filename=molino_carve.gcode"},
+    )
