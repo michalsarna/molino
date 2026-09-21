@@ -4,6 +4,15 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.11
+
+- **Flip horizontal / flip vertical** — two new toggle controls in the Image step; applied client-side before sending to server, so STL, G-code, and 3D preview all reflect the flip
+- **3D viewer orientation fixed** — reversed the Z-axis mapping in the viewer and centred the camera so the carved image appears in the same orientation as the original photo (no longer rotated relative to the upload)
+- **Tool change in G-code** — `T1 M6` command added before spindle start; includes a comment to remove it if the machine has no ATC
+- **Version bumped to 0.11**
+
+---
+
 ## v0.10
 
 - **Clickable step indicators** — click any step badge in the nav to jump to it; step 2 requires an image to be loaded, step 3 requires a preview to have been generated
