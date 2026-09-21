@@ -215,84 +215,119 @@ function initViewer() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x181a1d);
 
-  const w = container.clientWidth, h = container.clientHeight;
+  const w = container.clientWidth || 800, h = container.clientHeight || 480;
   camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 50000);
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(w, h);
   renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.shadowMap.enabled = true;
   container.appendChild(renderer.domElement);
 
+  // Y-up (Three.js default) — no camera.up override
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.07;
+  controls.minDistance = 5;
+  controls.maxDistance = 5000;
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.35));
-  const sun = new THREE.DirectionalLight(0xfff5e0, 1.2);
-  sun.position.set(1, 2, 1.5);
-  scene.add(sun);
-  scene.add(Object.assign(new THREE.DirectionalLight(0xc0d8ff, 0.3), { position: new THREE.Vector3(-1, 0.5, -1) }));
+  // Lighting: key from upper-front-right, fill from left, ambient base
+  scene.add(new THREE.AmbientLight(0xfff8f0, 0.5));
+  const key = new THREE.DirectionalLight(0xfff5e0, 1.1);
+  key.position.set(80, 150, 120);
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xd0e8ff, 0.4);
+  fill.position.set(-100, 60, -80);
+  scene.add(fill);
 
   const animate = () => { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); };
   animate();
 
   window.addEventListener("resize", () => {
     const nw = container.clientWidth, nh = container.clientHeight;
+    if (!nw || !nh) return;
     camera.aspect = nw / nh; camera.updateProjectionMatrix();
     renderer.setSize(nw, nh);
   });
 }
 
 function buildWoodMesh(heightmap, rows, cols, params) {
-  if (woodGroup) { scene.remove(woodGroup); woodGroup.traverse(o => o.geometry?.dispose()); }
+  if (woodGroup) {
+    scene.remove(woodGroup);
+    woodGroup.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+  }
 
-  const W = params.width_mm, H = params.height_mm;
-  const D = params.cut_depth, TH = params.wood_thickness;
+  // Coordinate system: Y-up (Three.js default)
+  //   j (image column) → X axis
+  //   i (image row)    → Z axis
+  //   carving depth    → Y axis (up = uncut surface)
+  const W  = params.width_mm;
+  const Dz = params.height_mm;   // image height mapped to Z
+  const CUT = params.cut_depth;
+  const TH  = params.wood_thickness;
 
-  // Top carved surface
-  const geo  = new THREE.BufferGeometry();
-  const pos  = new Float32Array(rows * cols * 3);
-  const col  = new Float32Array(rows * cols * 3);
-  const idx  = [];
+  // ── Carved top surface ────────────────────────────────────────────
+  const pos = new Float32Array(rows * cols * 3);
+  const col = new Float32Array(rows * cols * 3);
+  const idx = [];
 
   for (let i = 0; i < rows; i++) {
     for (let j = 0; j < cols; j++) {
       const k = i * cols + j;
-      pos[k * 3]     = (j / (cols - 1)) * W;
-      pos[k * 3 + 1] = (i / (rows - 1)) * H;
-      pos[k * 3 + 2] = TH - heightmap[k] * D;
+      // Centre geometry on origin for comfortable orbiting
+      pos[k * 3]     = (j / (cols - 1)) * W - W / 2;    // X: [-W/2, W/2]
+      pos[k * 3 + 1] = TH - heightmap[k] * CUT;          // Y: [TH-CUT, TH]
+      pos[k * 3 + 2] = (i / (rows - 1)) * Dz - Dz / 2;  // Z: [-Dz/2, Dz/2]
       const t = heightmap[k];
-      col[k * 3]     = 0.68 - t * 0.22;
-      col[k * 3 + 1] = 0.47 - t * 0.18;
-      col[k * 3 + 2] = 0.22 - t * 0.08;
+      col[k * 3]     = 0.72 - t * 0.25;  // R
+      col[k * 3 + 1] = 0.50 - t * 0.20;  // G
+      col[k * 3 + 2] = 0.24 - t * 0.10;  // B
     }
   }
+
+  // Winding for +Y normals in XZ surface:
+  //   a,c,b gives normal = +Y  (verified: (C-A)×(B-A) = +Y)
+  //   b,c,d gives normal = +Y
   for (let i = 0; i < rows - 1; i++) {
     for (let j = 0; j < cols - 1; j++) {
-      const a = i * cols + j, b = a + 1, c = (i + 1) * cols + j, d = c + 1;
-      idx.push(a, b, c, b, d, c);
+      const a = i * cols + j, b = a + 1,
+            c = (i + 1) * cols + j, d = c + 1;
+      idx.push(a, c, b,  b, c, d);
     }
   }
 
-  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute("color",    new THREE.BufferAttribute(col, 3));
-  geo.setIndex(idx);
-  geo.computeVertexNormals();
+  const topGeo = new THREE.BufferGeometry();
+  topGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  topGeo.setAttribute("color",    new THREE.BufferAttribute(col, 3));
+  topGeo.setIndex(idx);
+  topGeo.computeVertexNormals();
 
-  const topMesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 20 }));
+  const topMesh = new THREE.Mesh(
+    topGeo,
+    new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 35, side: THREE.FrontSide })
+  );
 
-  const baseGeo = new THREE.BoxGeometry(W, H, TH);
-  baseGeo.translate(W / 2, H / 2, -TH / 2);
-  const baseMesh = new THREE.Mesh(baseGeo, new THREE.MeshPhongMaterial({ color: 0xa0682a, shininess: 10 }));
+  // ── Solid wood base ───────────────────────────────────────────────
+  // Full block from Y=0 to Y=TH; polygonOffset pushes it back so the
+  // carved surface (Y≤TH) wins where they overlap (uncut areas at Y=TH).
+  const baseGeo = new THREE.BoxGeometry(W, TH, Dz);
+  const baseMat = new THREE.MeshPhongMaterial({
+    color: 0x8b5a28,
+    shininess: 8,
+    polygonOffset: true,
+    polygonOffsetFactor: 2,
+    polygonOffsetUnits: 2,
+  });
+  const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+  baseMesh.position.set(0, TH / 2, 0);  // Y: 0 → TH
 
   woodGroup = new THREE.Group();
   woodGroup.add(baseMesh, topMesh);
-  woodGroup.position.set(-W / 2, -H / 2, 0);
   scene.add(woodGroup);
 
-  const maxDim = Math.max(W, H, TH);
-  camera.position.set(W * 0.6, -H * 1.1, maxDim * 1.4);
-  camera.up.set(0, 0, 1);
-  controls.target.set(0, 0, TH / 2);
+  // Camera: Y-up, 3/4 angle above the front edge
+  const maxDim = Math.max(W, Dz, TH);
+  camera.position.set(W * 0.55, TH + maxDim * 0.85, Dz * 0.9);
+  controls.target.set(0, TH * 0.45, 0);
   controls.update();
 }
 
