@@ -4,6 +4,14 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.07
+
+- **STL bottom face fixed** — bottom face had inverted winding (+Z instead of −Z normal), causing slicers and viewers to render the solid mirrored; all six faces now have verified outward normals
+- **Default width 200 mm** — more practical starting point for typical carving work
+- **Default max cut depth 10 mm** — raised from 3 mm to better suit common stock removal depths
+
+---
+
 ## v0.06
 
 - **STL solid fixed** — all four side walls had inverted (inward-pointing) normals; winding corrected so every face of the exported solid has an outward normal, eliminating the hollow appearance in slicers
