@@ -261,10 +261,29 @@ function buildWoodMesh(heightmap, rows, cols, params) {
   //   j (image column) → X axis  [-W/2, W/2]
   //   i (image row)    → Z axis  [-Dz/2, Dz/2]
   //   carving depth    → Y axis  (Y=TH → uncut top, Y=TH-CUT → deepest cut)
-  const W   = params.width_mm;
-  const Dz  = params.height_mm;
+  const MARGIN = 5; // uncarved border in mm on each side
+  let W   = params.width_mm;
+  let Dz  = params.height_mm;
   const CUT = params.cut_depth;
   const TH  = params.wood_thickness;
+
+  // Pad heightmap with uncarved border so the carved image floats inside the wood block
+  {
+    const pxX = W  / Math.max(cols - 1, 1);
+    const pxZ = Dz / Math.max(rows - 1, 1);
+    const mj  = Math.max(1, Math.round(MARGIN / pxX));
+    const mi  = Math.max(1, Math.round(MARGIN / pxZ));
+    const nc  = cols + 2 * mj;
+    const nr  = rows + 2 * mi;
+    const pad = new Float32Array(nc * nr); // zeros = no cut
+    for (let i = 0; i < rows; i++)
+      for (let j = 0; j < cols; j++)
+        pad[(i + mi) * nc + (j + mj)] = heightmap[i * cols + j];
+    heightmap = pad;
+    cols = nc; rows = nr;
+    W  += 2 * MARGIN;
+    Dz += 2 * MARGIN;
+  }
 
   const xAt = j => (j / (cols - 1)) * W  - W  / 2;
   const zAt = i => (i / (rows - 1)) * Dz - Dz / 2;
