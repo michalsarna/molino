@@ -327,11 +327,11 @@ function buildWoodMesh(heightmap, rows, cols, params) {
         col[k * 3 + 2] = 0.24 - t * 0.12;
       }
     }
-    // Winding a,c,b / b,c,d → cross product gives +Y normals
+    // With reversed zAt, Z decreases as i increases → winding a,b,c / b,d,c gives +Y normals
     for (let i = 0; i < rows - 1; i++) {
       for (let j = 0; j < cols - 1; j++) {
         const a = i * cols + j, b = a + 1, c = (i + 1) * cols + j, d = c + 1;
-        idx.push(a, c, b,  b, c, d);
+        idx.push(a, b, c,  b, d, c);
       }
     }
     const geo = new THREE.BufferGeometry();
@@ -425,7 +425,7 @@ async function generatePreview() {
   loadingOverlay.classList.remove("hidden");
 
   try {
-    const res  = await apiPost("/api/preview", { aspect: p.width_mm / p.height_mm });
+    const res  = await apiPost("/api/preview", { ...p, aspect: p.width_mm / p.height_mm });
     const data = await res.json();
 
     initViewer();
