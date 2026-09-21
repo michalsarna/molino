@@ -10,6 +10,10 @@
 4. **Preview** the result as an interactive 3D visualization of the carved wood piece.
 5. Download the **STL** for inspection in a slicer, and the **G-code** ready for your CNC machine.
 
+## Features (v0.02)
+
+- Virtual environment support and Docker / Docker Compose packaging
+
 ## Features (v0.01)
 
 - Drag-and-drop image upload with live B&W depth-map preview
@@ -24,20 +28,36 @@
 
 ## Requirements
 
-- Python 3.10+
-- pip
+- Python 3.10+ (for local / venv run)
+- Docker + Docker Compose (for container run)
 
 ## Quick start
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
+### Local (virtual environment)
 
-# Start the server
+```bash
+python3 -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements.txt
 python run.py
 ```
 
-Then open [http://localhost:8000](http://localhost:8000) in your browser.
+Then open [http://localhost:8000](http://localhost:8000).
+
+### Docker
+
+```bash
+docker compose up --build
+```
+
+Then open [http://localhost:8000](http://localhost:8000).
+
+To run in the background:
+
+```bash
+docker compose up -d --build
+docker compose down             # stop
+```
 
 ## Machining parameters
 
