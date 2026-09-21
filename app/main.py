@@ -61,15 +61,17 @@ async def preview(req: GenerateRequest):
 
     hm = process_image_to_heightmap(img_bytes, cols, rows)
 
-    # Apply tool geometry so the preview matches what STL/G-code will produce
-    from app.image_processor import apply_tool_compensation
+    # Simulate actual machined surface so the preview matches STL
+    from app.image_processor import apply_tool_geometry
     width_mm  = float(p.get("width_mm",  100.0))
     height_mm = float(p.get("height_mm", 100.0))
+    cut_depth = float(p.get("cut_depth", 3.0))
     x_step = width_mm  / max(cols - 1, 1)
     y_step = height_mm / max(rows - 1, 1)
     bit_type     = p.get("bit_type", "vbit")
     bit_diameter = float(p.get("bit_diameter", 3.175))
-    hm = apply_tool_compensation(hm, bit_type, bit_diameter, x_step, y_step)
+    tip_angle    = float(p.get("tip_angle", 60.0))
+    hm = apply_tool_geometry(hm, bit_type, bit_diameter, tip_angle, cut_depth, x_step, y_step)
 
     return {
         "heightmap": hm.flatten().tolist(),
