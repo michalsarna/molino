@@ -4,6 +4,14 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.12
+
+- **Docker image versioning** — `docker-compose.yml` now tags the built image as `molino:0.12` and passes `BUILD_VERSION` as a build arg; `Dockerfile` records it as an image `LABEL`
+- **STL header updated** — binary STL header string corrected from `v0.06` to current version
+- **Version bumped to 0.12**
+
+---
+
 ## v0.11
 
 - **Flip horizontal / flip vertical** — two new toggle controls in the Image step; applied client-side before sending to server, so STL, G-code, and 3D preview all reflect the flip
