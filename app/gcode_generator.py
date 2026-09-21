@@ -1,7 +1,6 @@
 import math
 import numpy as np
 
-from app.image_processor import apply_tool_compensation
 
 
 def generate_gcode(heightmap: np.ndarray, params: dict) -> str:
@@ -35,9 +34,6 @@ def generate_gcode(heightmap: np.ndarray, params: dict) -> str:
 
     x_step = width_mm / max(cols - 1, 1)
     y_step = height_mm / max(rows - 1, 1)
-
-    # Apply tool geometry (end-mill radius limits achievable detail)
-    heightmap = apply_tool_compensation(heightmap, bit_type, bit_diameter, x_step, y_step)
 
     lines = [
         "; ============================================================",

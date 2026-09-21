@@ -2,7 +2,7 @@ import io
 import struct
 import numpy as np
 
-from app.image_processor import apply_tool_compensation
+from app.image_processor import apply_tool_geometry
 
 
 def _triangle(buf: io.BytesIO, v1, v2, v3):
@@ -30,10 +30,12 @@ def generate_stl(heightmap: np.ndarray, params: dict) -> bytes:
     x_step = width_mm / max(cols - 1, 1)
     y_step = height_mm / max(rows - 1, 1)
 
-    # Apply tool geometry (e.g. end-mill radius limits fine-detail resolution)
-    bit_type = params.get("bit_type", "vbit")
+    # Simulate actual machined surface (tool spreading / V-cone inter-pass shape)
+    bit_type     = params.get("bit_type", "vbit")
     bit_diameter = float(params.get("bit_diameter", 3.175))
-    heightmap = apply_tool_compensation(heightmap, bit_type, bit_diameter, x_step, y_step)
+    tip_angle    = float(params.get("tip_angle", 60.0))
+    heightmap = apply_tool_geometry(heightmap, bit_type, bit_diameter,
+                                    tip_angle, cut_depth_mm, x_step, y_step)
 
     # z_top[i,j] = z coordinate of carved surface at grid point (i,j)
     z_top = wood_thickness - heightmap * cut_depth_mm
