@@ -8,3 +8,4 @@ __pycache__/
 *.md
 .env
 .pytest_cache/
+private/
