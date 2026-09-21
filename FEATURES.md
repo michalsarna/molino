@@ -4,6 +4,16 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.14
+
+- **G-code Z precision** — all depths quantized to 0.01 mm (machine step resolution); Z move emitted only when change ≥ 0.01 mm so programmed path = executed path
+- **Smart pass skipping** — in passes 2+ the generator skips entire rows whose deepest pixel was already cut to its final depth in an earlier pass; avoids re-traversing finished material and surface damage
+- **G-code header** — now shows Z step and updated pass range (`depth A → depth B`) per pass
+- **Estimated time in h/mm** — export info now shows `1h 23m` instead of raw minutes
+- **Version bumped to 0.14**
+
+---
+
 ## v0.13
 
 - **Export info cleaned up** — renamed "passes" to "raster lines" (CNC-correct); added tool label (bit type, angle, diameter); time estimate now includes depth passes and plunge time

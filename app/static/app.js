@@ -439,7 +439,12 @@ async function generatePreview() {
     const depthPasses   = Math.ceil(p.cut_depth / (p.depth_per_pass || p.cut_depth));
     const cutTimeMin    = rasterLines * depthPasses * p.width_mm / p.feed_rate;
     const plungeTimeMin = rasterLines * depthPasses * p.safe_height / p.plunge_rate;
-    const timeMin       = (cutTimeMin + plungeTimeMin).toFixed(0);
+    const totalMin      = cutTimeMin + plungeTimeMin;
+    const estHours      = Math.floor(totalMin / 60);
+    const estMins       = Math.round(totalMin % 60);
+    const timeLabel     = estHours > 0
+      ? `${estHours}h ${String(estMins).padStart(2, "0")}m`
+      : `${estMins}m`;
     const u             = state.units === "imperial";
     const fmt           = v => u ? (v / MM_PER_INCH).toFixed(3) + " in" : v.toFixed(1) + " mm";
     const toolLabel     = p.bit_type === "vbit"
@@ -453,7 +458,7 @@ async function generatePreview() {
       (depthPasses > 1 ? `${depthPasses} depth passes &nbsp;|&nbsp; ` : "") +
       `${rasterLines} raster lines &nbsp;|&nbsp; ` +
       `Tool: <b>${toolLabel}</b> &nbsp;|&nbsp; ` +
-      `Est: <b>~${timeMin} min</b>`;
+      `Est: <b>~${timeLabel}</b>`;
   } catch (err) {
     alert("Error generating preview:\n" + err.message);
   } finally {
