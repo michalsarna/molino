@@ -53,9 +53,10 @@ def generate_stl(heightmap: np.ndarray, params: dict) -> bytes:
             _triangle(buf, (x0, y0, z00), (x1, y0, z10), (x2, y2, z01))
             _triangle(buf, (x1, y0, z10), (x3, y3, z11), (x2, y2, z01))
 
-    # Bottom face (z=0, normal -Z)
-    _triangle(buf, (0, 0, 0), (width_mm, 0, 0), (width_mm, height_mm, 0))
-    _triangle(buf, (0, 0, 0), (width_mm, height_mm, 0), (0, height_mm, 0))
+    # Bottom face (Z=0, -Z normal outward)
+    # CCW from below (-Z): (0,0)→(0,H)→(W,H)→(W,0)
+    _triangle(buf, (0, 0, 0), (0, height_mm, 0), (width_mm, height_mm, 0))
+    _triangle(buf, (0, 0, 0), (width_mm, height_mm, 0), (width_mm, 0, 0))
 
     # Front wall (y=0, normal -Y)
     for j in range(cols - 1):
