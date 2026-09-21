@@ -10,6 +10,12 @@
 4. **Preview** the result as an interactive 3D visualization of the carved wood piece.
 5. Download the **STL** for inspection in a slicer, and the **G-code** ready for your CNC machine.
 
+## Features (v0.05)
+
+- **3D preview overhauled** — replaced occluding box base with a proper closed solid (carved surface + 4 side walls following edge heightmap + flat bottom); carved depressions are now fully visible from any angle; added subtle ground grid for depth reference
+- **Version display** — header version badge fetched live from `/api/info` so it always matches the running server
+- **`.dockerignore`** — excludes `venv/`, `.git/`, `__pycache__`, markdown files from the Docker build context
+
 ## Features (v0.04)
 
 - **SVG favicon** — CNC spindle icon, works in all modern browsers
