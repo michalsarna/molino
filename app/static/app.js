@@ -197,6 +197,7 @@ function collectParams() {
     cut_depth:      mm("p-cut-depth"),
     wood_thickness: mm("p-wood-thick"),
     step_over:      mm("p-step-over"),
+    depth_per_pass: mm("p-depth-per-pass"),
     spindle_speed:  parseInt(document.getElementById("p-spindle").value),
     feed_rate:      mm("p-feed"),
     plunge_rate:    mm("p-plunge"),
