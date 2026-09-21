@@ -2,7 +2,7 @@
 
 > **Photo → CNC wood carving** — upload a photo, tune it, and get a G-code toolpath and STL model ready to carve.
 
-[![Live](https://img.shields.io/badge/version-0.08-amber)](https://github.com/michalsarna/molino)
+[![Live](https://img.shields.io/badge/version-0.09-amber)](https://github.com/michalsarna/molino)
 
 ## What it does
 
@@ -67,6 +67,7 @@ docker compose down             # stop
 | Max cut depth | Deepest point of the carving in mm |
 | Wood thickness | Total thickness of the wood stock |
 | Step over | Distance between adjacent passes in mm (smaller = finer detail, more time) |
+| Depth per pass | Maximum Z increment per raster pass; multiple passes are generated until full depth is reached |
 | Spindle speed | RPM |
 | Feed rate | XY cutting speed in mm/min |
 | Plunge rate | Z plunge speed in mm/min |
