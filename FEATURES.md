@@ -4,6 +4,14 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.13
+
+- **Export info cleaned up** — renamed "passes" to "raster lines" (CNC-correct); added tool label (bit type, angle, diameter); time estimate now includes depth passes and plunge time
+- **Original filename in downloads** — STL and G-code files are named `molino_vX.YY_<original_image_name>_carve.*`
+- **Version bumped to 0.13**
+
+---
+
 ## v0.12
 
 - **Docker image versioning** — `docker-compose.yml` now tags the built image as `molino:0.12` and passes `BUILD_VERSION` as a build arg; `Dockerfile` records it as an image `LABEL`
