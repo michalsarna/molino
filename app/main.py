@@ -10,7 +10,7 @@ from app.gcode_generator import generate_gcode
 from app.image_processor import process_image_to_heightmap
 from app.stl_generator import generate_stl
 
-app = FastAPI(title="Molino", version="0.09")
+app = FastAPI(title="Molino", version="0.10")
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -85,7 +85,7 @@ async def download_stl(req: GenerateRequest):
     return Response(
         content=stl_bytes,
         media_type="application/octet-stream",
-        headers={"Content-Disposition": "attachment; filename=molino_carve.stl"},
+        headers={"Content-Disposition": f"attachment; filename=molino_v{app.version}_carve.stl"},
     )
 
 
@@ -106,5 +106,5 @@ async def download_gcode(req: GenerateRequest):
     return Response(
         content=gcode,
         media_type="text/plain",
-        headers={"Content-Disposition": "attachment; filename=molino_carve.gcode"},
+        headers={"Content-Disposition": f"attachment; filename=molino_v{app.version}_carve.gcode"},
     )

@@ -12,6 +12,8 @@ const state = {
   processedDataURL: null,
   params: {},
   units: "metric",   // "metric" | "imperial"
+  version: "0.00",
+  previewGenerated: false,
 };
 
 // ── DOM refs ──────────────────────────────────────────────────────────────
@@ -414,6 +416,7 @@ async function generatePreview() {
 
     initViewer();
     buildWoodMesh(data.heightmap, data.rows, data.cols, p);
+    state.previewGenerated = true;
 
     const stepOver = p.step_over;
     const yPasses  = Math.ceil(p.height_mm / stepOver);
@@ -492,11 +495,27 @@ btnGenerate.addEventListener("click", async () => {
 
 btnBack3.addEventListener("click", () => showStep(2));
 
-btnDlStl.addEventListener("click",   () => downloadFile("/api/download/stl",   "molino_carve.stl"));
-btnDlGcode.addEventListener("click", () => downloadFile("/api/download/gcode", "molino_carve.gcode"));
+btnDlStl.addEventListener("click",   () => downloadFile("/api/download/stl",   `molino_v${state.version}_carve.stl`));
+btnDlGcode.addEventListener("click", () => downloadFile("/api/download/gcode", `molino_v${state.version}_carve.gcode`));
+
+// ── Logo click → new session ───────────────────────────────────────────────
+document.querySelector(".logo").addEventListener("click", () => location.reload());
+
+// ── Step indicator click → navigate ───────────────────────────────────────
+document.querySelectorAll(".step-indicator").forEach(el => {
+  el.addEventListener("click", () => {
+    const n = parseInt(el.dataset.step);
+    if (n === 1) { showStep(1); return; }
+    if (n === 2 && state.processedDataURL) { showStep(2); return; }
+    if (n === 3 && state.previewGenerated) { showStep(3); return; }
+  });
+});
 
 // ── Version display ────────────────────────────────────────────────────────
 fetch("/api/info")
   .then(r => r.json())
-  .then(({ version }) => { document.querySelector(".version").textContent = `v${version}`; })
+  .then(({ version }) => {
+    state.version = version;
+    document.querySelector(".version").textContent = `v${version}`;
+  })
   .catch(() => {});
