@@ -14,6 +14,7 @@ const state = {
   units: "metric",   // "metric" | "imperial"
   version: "0.00",
   previewGenerated: false,
+  originalFileName: "",
 };
 
 // ── DOM refs ──────────────────────────────────────────────────────────────
@@ -63,6 +64,7 @@ function showStep(n) {
 
 // ── Image loading ─────────────────────────────────────────────────────────
 function loadImage(file) {
+  state.originalFileName = file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "_");
   const reader = new FileReader();
   reader.onload = e => {
     const img = new Image();
@@ -432,17 +434,26 @@ async function generatePreview() {
     buildWoodMesh(data.heightmap, data.rows, data.cols, p);
     state.previewGenerated = true;
 
-    const stepOver = p.step_over;
-    const yPasses  = Math.ceil(p.height_mm / stepOver);
-    const timeMin  = (yPasses * p.width_mm / p.feed_rate).toFixed(1);
-    const u        = state.units === "imperial";
-    const fmt      = v => u ? (v / MM_PER_INCH).toFixed(3) + " in" : v.toFixed(1) + " mm";
+    const stepOver      = p.step_over;
+    const rasterLines   = Math.ceil(p.height_mm / stepOver);
+    const depthPasses   = Math.ceil(p.cut_depth / (p.depth_per_pass || p.cut_depth));
+    const cutTimeMin    = rasterLines * depthPasses * p.width_mm / p.feed_rate;
+    const plungeTimeMin = rasterLines * depthPasses * p.safe_height / p.plunge_rate;
+    const timeMin       = (cutTimeMin + plungeTimeMin).toFixed(0);
+    const u             = state.units === "imperial";
+    const fmt           = v => u ? (v / MM_PER_INCH).toFixed(3) + " in" : v.toFixed(1) + " mm";
+    const toolLabel     = p.bit_type === "vbit"
+      ? `V-bit ${p.tip_angle}° / ⌀${fmt(p.bit_diameter)}`
+      : `End mill ⌀${fmt(p.bit_diameter)}`;
 
     exportInfo.innerHTML =
       `Size: <b>${fmt(p.width_mm)} × ${fmt(p.height_mm)}</b> &nbsp;|&nbsp; ` +
       `Depth: <b>${fmt(p.cut_depth)}</b> &nbsp;|&nbsp; ` +
       `Step: <b>${fmt(stepOver)}</b> &nbsp;|&nbsp; ` +
-      `~${yPasses} passes &nbsp;|&nbsp; Est: <b>~${timeMin} min</b>`;
+      (depthPasses > 1 ? `${depthPasses} depth passes &nbsp;|&nbsp; ` : "") +
+      `${rasterLines} raster lines &nbsp;|&nbsp; ` +
+      `Tool: <b>${toolLabel}</b> &nbsp;|&nbsp; ` +
+      `Est: <b>~${timeMin} min</b>`;
   } catch (err) {
     alert("Error generating preview:\n" + err.message);
   } finally {
@@ -511,8 +522,8 @@ btnGenerate.addEventListener("click", async () => {
 
 btnBack3.addEventListener("click", () => showStep(2));
 
-btnDlStl.addEventListener("click",   () => downloadFile("/api/download/stl",   `molino_v${state.version}_carve.stl`));
-btnDlGcode.addEventListener("click", () => downloadFile("/api/download/gcode", `molino_v${state.version}_carve.gcode`));
+btnDlStl.addEventListener("click",   () => downloadFile("/api/download/stl",   `molino_v${state.version}_${state.originalFileName}_carve.stl`));
+btnDlGcode.addEventListener("click", () => downloadFile("/api/download/gcode", `molino_v${state.version}_${state.originalFileName}_carve.gcode`));
 
 // ── Logo click → new session ───────────────────────────────────────────────
 document.querySelector(".logo").addEventListener("click", () => location.reload());
