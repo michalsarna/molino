@@ -18,4 +18,6 @@ def process_image_to_heightmap(image_bytes: bytes, cols: int, rows: int = None) 
     img = img.resize((cols, rows), Image.LANCZOS)
     arr = np.array(img, dtype=np.float32) / 255.0
     # Invert: black pixel (0) → full cut depth (1.0), white (1) → no cut (0.0)
-    return 1.0 - arr
+    # Flip rows: image row-0 (top) maps to high-Y so it appears at the top
+    # of the standard top-down view instead of upside-down.
+    return np.ascontiguousarray((1.0 - arr)[::-1, :])
