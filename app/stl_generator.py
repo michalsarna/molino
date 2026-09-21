@@ -47,7 +47,7 @@ def generate_stl(heightmap: np.ndarray, params: dict) -> bytes:
     total = top_tris + bottom_tris + side_tris
 
     buf = io.BytesIO()
-    buf.write(b"Molino v0.12" + b" " * (80 - len("Molino v0.12")))
+    buf.write(b"Molino v0.13" + b" " * (80 - len("Molino v0.13")))
     buf.write(struct.pack("<I", total))
 
     # Top surface
