@@ -38,7 +38,7 @@ def generate_stl(heightmap: np.ndarray, params: dict) -> bytes:
     total = top_tris + bottom_tris + side_tris
 
     buf = io.BytesIO()
-    buf.write(b"Molino v0.01" + b" " * (80 - len("Molino v0.01")))
+    buf.write(b"Molino v0.06" + b" " * (80 - len("Molino v0.06")))
     buf.write(struct.pack("<I", total))
 
     # Top surface
@@ -61,28 +61,28 @@ def generate_stl(heightmap: np.ndarray, params: dict) -> bytes:
     for j in range(cols - 1):
         x0, x1 = j * x_step, (j + 1) * x_step
         zt0, zt1 = float(z_top[0, j]), float(z_top[0, j + 1])
-        _triangle(buf, (x0, 0, 0), (x0, 0, zt0), (x1, 0, zt1))
-        _triangle(buf, (x0, 0, 0), (x1, 0, zt1), (x1, 0, 0))
+        _triangle(buf, (x0, 0, 0), (x1, 0, 0), (x1, 0, zt1))
+        _triangle(buf, (x0, 0, 0), (x1, 0, zt1), (x0, 0, zt0))
 
     # Back wall (y=height_mm, normal +Y)
     for j in range(cols - 1):
         x0, x1 = j * x_step, (j + 1) * x_step
         zt0, zt1 = float(z_top[rows - 1, j]), float(z_top[rows - 1, j + 1])
-        _triangle(buf, (x0, height_mm, 0), (x1, height_mm, zt1), (x0, height_mm, zt0))
-        _triangle(buf, (x0, height_mm, 0), (x1, height_mm, 0), (x1, height_mm, zt1))
+        _triangle(buf, (x0, height_mm, 0), (x0, height_mm, zt0), (x1, height_mm, zt1))
+        _triangle(buf, (x0, height_mm, 0), (x1, height_mm, zt1), (x1, height_mm, 0))
 
     # Left wall (x=0, normal -X)
     for i in range(rows - 1):
         y0, y1 = i * y_step, (i + 1) * y_step
         zt0, zt1 = float(z_top[i, 0]), float(z_top[i + 1, 0])
-        _triangle(buf, (0, y0, 0), (0, y1, zt1), (0, y0, zt0))
-        _triangle(buf, (0, y0, 0), (0, y1, 0), (0, y1, zt1))
+        _triangle(buf, (0, y0, 0), (0, y0, zt0), (0, y1, zt1))
+        _triangle(buf, (0, y0, 0), (0, y1, zt1), (0, y1, 0))
 
     # Right wall (x=width_mm, normal +X)
     for i in range(rows - 1):
         y0, y1 = i * y_step, (i + 1) * y_step
         zt0, zt1 = float(z_top[i, cols - 1]), float(z_top[i + 1, cols - 1])
-        _triangle(buf, (width_mm, y0, 0), (width_mm, y0, zt0), (width_mm, y1, zt1))
-        _triangle(buf, (width_mm, y0, 0), (width_mm, y1, zt1), (width_mm, y1, 0))
+        _triangle(buf, (width_mm, y0, 0), (width_mm, y1, zt1), (width_mm, y0, zt0))
+        _triangle(buf, (width_mm, y0, 0), (width_mm, y1, 0), (width_mm, y1, zt1))
 
     return buf.getvalue()

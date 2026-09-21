@@ -2,44 +2,25 @@
 
 > **Photo → CNC wood carving** — upload a photo, tune it, and get a G-code toolpath and STL model ready to carve.
 
+[![Live](https://img.shields.io/badge/version-0.06-amber)](https://github.com/michalsarna/molino)
+
 ## What it does
 
 1. **Upload any photo** and adjust it in the browser (brightness, contrast, color inversion) — images are never written to disk.
 2. The photo is converted to a **grayscale depth map**: black pixels become the deepest cut, white pixels are left uncut, grays are everything in between.
 3. Set your **machining parameters** (bit type, cut depth, step-over, spindle speed, feed rate, etc.) and physical wood size.
-4. **Preview** the result as an interactive 3D visualization of the carved wood piece.
-5. Download the **STL** for inspection in a slicer, and the **G-code** ready for your CNC machine.
+4. **Preview** the result as an interactive 3D visualization of the carved wood piece (with a 5 mm uncarved border).
+5. Download the **STL** (closed solid, correct outward normals) and the **G-code** ready for your CNC machine.
 
-## Features (v0.05)
+## Features
 
-- **3D preview overhauled** — replaced occluding box base with a proper closed solid (carved surface + 4 side walls following edge heightmap + flat bottom); carved depressions are now fully visible from any angle; added subtle ground grid for depth reference
-- **Version display** — header version badge fetched live from `/api/info` so it always matches the running server
-- **`.dockerignore`** — excludes `venv/`, `.git/`, `__pycache__`, markdown files from the Docker build context
-
-## Features (v0.04)
-
-- **SVG favicon** — CNC spindle icon, works in all modern browsers
-- **3D preview fixed** — corrected coordinate system (Y-up), triangle winding, base box position and Z-fighting; OrbitControls now behave correctly
-
-## Features (v0.03)
-
-- **Large image support** — API switched from multipart form to JSON body, eliminating the 1 MB per-part limit; photos of any size work
-- **Metric / Imperial toggle** — switch between mm and inches in the parameters step; all values convert live; G-code outputs `G20`/`G21` accordingly
-
-## Features (v0.02)
-
-- Virtual environment support and Docker / Docker Compose packaging
-
-## Features (v0.01)
-
-- Drag-and-drop image upload with live B&W depth-map preview
-- Brightness, contrast, and color-flip controls
-- Locked aspect ratio — set width in mm, height calculated automatically
+- Live browser-side depth-map preview — brightness, contrast, invert, no server round-trip
+- Locked aspect ratio: set width, height calculated automatically from the image
+- Metric / Imperial unit toggle; G-code outputs `G20`/`G21` accordingly
 - V-bit and flat end mill support
-- Raster-scan G-code generation (bi-directional, metric, absolute positioning)
-- Binary STL export of the full carved wood solid (top surface + base + walls)
-- Interactive Three.js 3D viewer with orbit controls
-- Estimated machining time shown before download
+- Raster-scan G-code (bi-directional boustrophedon, absolute positioning)
+- Binary STL export — proper closed solid with outward normals on all faces
+- Interactive Three.js 3D viewer with orbit controls and 5 mm uncarved margin
 - Fully stateless — no files stored on the server
 
 ## Requirements
@@ -93,7 +74,7 @@ docker compose down             # stop
 
 ## Versioning & contributing
 
-Branch names correspond to version numbers (`XX.yy` format). All changes to `main` go through pull requests. Each merged PR bumps the version.
+Branch names correspond to version numbers (`XX.yy` format). All changes to `master` go through pull requests. Each merged PR bumps the version. Per-version feature history is in [FEATURES.md](FEATURES.md).
 
 ## License
 
