@@ -10,6 +10,11 @@
 4. **Preview** the result as an interactive 3D visualization of the carved wood piece.
 5. Download the **STL** for inspection in a slicer, and the **G-code** ready for your CNC machine.
 
+## Features (v0.03)
+
+- **Large image support** — API switched from multipart form to JSON body, eliminating the 1 MB per-part limit; photos of any size work
+- **Metric / Imperial toggle** — switch between mm and inches in the parameters step; all values convert live; G-code outputs `G20`/`G21` accordingly
+
 ## Features (v0.02)
 
 - Virtual environment support and Docker / Docker Compose packaging

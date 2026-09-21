@@ -88,17 +88,23 @@
     <div class="step-inner">
       <h2>Machining Parameters</h2>
 
+      <div class="units-bar">
+        <span>Unit system:</span>
+        <label><input type="radio" name="units" value="metric" checked /> Metric (mm)</label>
+        <label><input type="radio" name="units" value="imperial" /> Imperial (in)</label>
+      </div>
+
       <div class="params-grid">
 
         <fieldset>
           <legend>Physical Size</legend>
           <label>
-            Width (mm)
-            <input type="number" id="p-width" value="100" min="1" max="3000" step="1" />
+            Width <span class="unit-label">(mm)</span>
+            <input type="number" id="p-width" value="100" min="0.01" step="any" data-unit="length" data-mm="100" />
           </label>
           <label>
-            Height (mm) <em>auto</em>
-            <input type="number" id="p-height" readonly tabindex="-1" />
+            Height <span class="unit-label">(mm)</span> <em>auto</em>
+            <input type="number" id="p-height" readonly tabindex="-1" data-unit="length" />
           </label>
         </fieldset>
 
@@ -112,8 +118,8 @@
             </select>
           </label>
           <label>
-            Diameter (mm)
-            <input type="number" id="p-bit-dia" value="3.175" min="0.1" max="50" step="0.001" />
+            Diameter <span class="unit-label">(mm)</span>
+            <input type="number" id="p-bit-dia" value="3.175" min="0.001" step="any" data-unit="length" data-mm="3.175" />
           </label>
           <label id="row-tip-angle">
             Tip angle (°)
@@ -124,16 +130,16 @@
         <fieldset>
           <legend>Cutting Parameters</legend>
           <label>
-            Max cut depth (mm)
-            <input type="number" id="p-cut-depth" value="3.0" min="0.1" max="50" step="0.1" />
+            Max cut depth <span class="unit-label">(mm)</span>
+            <input type="number" id="p-cut-depth" value="3.0" min="0.001" step="any" data-unit="length" data-mm="3.0" />
           </label>
           <label>
-            Wood thickness (mm)
-            <input type="number" id="p-wood-thick" value="18.0" min="1" max="200" step="0.5" />
+            Wood thickness <span class="unit-label">(mm)</span>
+            <input type="number" id="p-wood-thick" value="18.0" min="0.001" step="any" data-unit="length" data-mm="18.0" />
           </label>
           <label>
-            Step over (mm)
-            <input type="number" id="p-step-over" value="0.25" min="0.05" max="10" step="0.05" />
+            Step over <span class="unit-label">(mm)</span>
+            <input type="number" id="p-step-over" value="0.25" min="0.001" step="any" data-unit="length" data-mm="0.25" />
           </label>
         </fieldset>
 
@@ -144,16 +150,16 @@
             <input type="number" id="p-spindle" value="12000" min="100" max="60000" step="100" />
           </label>
           <label>
-            Feed rate (mm/min)
-            <input type="number" id="p-feed" value="1000" min="10" max="10000" step="10" />
+            Feed rate <span class="unit-label">(mm/min)</span>
+            <input type="number" id="p-feed" value="1000" min="0.01" step="any" data-unit="rate" data-mm="1000" />
           </label>
           <label>
-            Plunge rate (mm/min)
-            <input type="number" id="p-plunge" value="300" min="10" max="5000" step="10" />
+            Plunge rate <span class="unit-label">(mm/min)</span>
+            <input type="number" id="p-plunge" value="300" min="0.01" step="any" data-unit="rate" data-mm="300" />
           </label>
           <label>
-            Safe height (mm)
-            <input type="number" id="p-safe-h" value="5.0" min="1" max="50" step="0.5" />
+            Safe height <span class="unit-label">(mm)</span>
+            <input type="number" id="p-safe-h" value="5.0" min="0.001" step="any" data-unit="length" data-mm="5.0" />
           </label>
         </fieldset>
 

@@ -1,23 +1,27 @@
-import base64
-import json
-import math
+from typing import Any
 
 import numpy as np
-from fastapi import FastAPI, Form, HTTPException
+from fastapi import FastAPI
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from app.gcode_generator import generate_gcode
 from app.image_processor import process_image_to_heightmap
 from app.stl_generator import generate_stl
 
-app = FastAPI(title="Molino", version="0.01")
+app = FastAPI(title="Molino", version="0.03")
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-PREVIEW_RES = 200   # max heightmap dimension for 3D preview
-STL_RES = 300       # max heightmap dimension for STL export
-GCODE_MAX = 2000    # max steps per axis for G-code
+PREVIEW_RES = 200
+STL_RES = 300
+GCODE_MAX = 2000
+
+
+class GenerateRequest(BaseModel):
+    image_data: str           # base64 data-URL or raw base64
+    params: dict[str, Any] = {}
 
 
 @app.get("/")
@@ -26,6 +30,7 @@ async def index():
 
 
 def _decode_image(b64: str) -> bytes:
+    import base64
     if "," in b64:
         b64 = b64.split(",", 1)[1]
     return base64.b64decode(b64)
@@ -38,12 +43,9 @@ def _clamp_resolution(width_mm: float, height_mm: float, step_mm: float, max_ste
 
 
 @app.post("/api/preview")
-async def preview(
-    image_data: str = Form(...),
-    params: str = Form(...),
-):
-    p = json.loads(params)
-    img_bytes = _decode_image(image_data)
+async def preview(req: GenerateRequest):
+    p = req.params
+    img_bytes = _decode_image(req.image_data)
 
     aspect = float(p.get("aspect", 1.0))
     cols = PREVIEW_RES
@@ -62,12 +64,9 @@ async def preview(
 
 
 @app.post("/api/download/stl")
-async def download_stl(
-    image_data: str = Form(...),
-    params: str = Form(...),
-):
-    p = json.loads(params)
-    img_bytes = _decode_image(image_data)
+async def download_stl(req: GenerateRequest):
+    p = req.params
+    img_bytes = _decode_image(req.image_data)
 
     width_mm = float(p.get("width_mm", 100.0))
     height_mm = float(p.get("height_mm", 100.0))
@@ -86,20 +85,15 @@ async def download_stl(
 
 
 @app.post("/api/download/gcode")
-async def download_gcode(
-    image_data: str = Form(...),
-    params: str = Form(...),
-):
-    p = json.loads(params)
-    img_bytes = _decode_image(image_data)
+async def download_gcode(req: GenerateRequest):
+    p = req.params
+    img_bytes = _decode_image(req.image_data)
 
     width_mm = float(p.get("width_mm", 100.0))
     height_mm = float(p.get("height_mm", 100.0))
     step_over = float(p.get("step_over", 0.25))
 
     cols, rows = _clamp_resolution(width_mm, height_mm, step_over, GCODE_MAX)
-    p["width_mm"] = width_mm
-    p["height_mm"] = height_mm
 
     hm = process_image_to_heightmap(img_bytes, cols, rows)
     gcode = generate_gcode(hm, p)
