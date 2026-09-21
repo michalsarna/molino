@@ -26,6 +26,8 @@ const ctx           = previewCanvas.getContext("2d");
 const ctrlBrightness = document.getElementById("ctrl-brightness");
 const ctrlContrast   = document.getElementById("ctrl-contrast");
 const ctrlInvert     = document.getElementById("ctrl-invert");
+const ctrlFlipH      = document.getElementById("ctrl-flip-h");
+const ctrlFlipV      = document.getElementById("ctrl-flip-v");
 const valBrightness  = document.getElementById("val-brightness");
 const valContrast    = document.getElementById("val-contrast");
 
@@ -93,9 +95,11 @@ function clamp(v) { return v < 0 ? 0 : v > 255 ? 255 : v; }
 function updatePreview() {
   if (!state.originalPixels) return;
 
-  const brightness   = parseInt(ctrlBrightness.value);
-  const contrast     = parseInt(ctrlContrast.value);
-  const invert       = ctrlInvert.checked;
+  const brightness = parseInt(ctrlBrightness.value);
+  const contrast   = parseInt(ctrlContrast.value);
+  const invert     = ctrlInvert.checked;
+  const flipH      = ctrlFlipH.checked;
+  const flipV      = ctrlFlipV.checked;
   valBrightness.textContent = brightness >= 0 ? `+${brightness}` : brightness;
   valContrast.textContent   = contrast   >= 0 ? `+${contrast}`   : contrast;
 
@@ -107,14 +111,19 @@ function updatePreview() {
   const out = ctx.createImageData(w, h);
   const d   = out.data;
 
-  for (let i = 0; i < w * h; i++) {
-    const si = i * 4;
-    let g = 0.299 * src[si] + 0.587 * src[si + 1] + 0.114 * src[si + 2];
-    g = clamp(g + brightness);
-    g = clamp(cf * (g - 128) + 128);
-    if (invert) g = 255 - g;
-    d[si] = d[si + 1] = d[si + 2] = g;
-    d[si + 3] = 255;
+  for (let r = 0; r < h; r++) {
+    for (let c = 0; c < w; c++) {
+      const srcR = flipV ? h - 1 - r : r;
+      const srcC = flipH ? w - 1 - c : c;
+      const si = (srcR * w + srcC) * 4;
+      const di = (r * w + c) * 4;
+      let g = 0.299 * src[si] + 0.587 * src[si + 1] + 0.114 * src[si + 2];
+      g = clamp(g + brightness);
+      g = clamp(cf * (g - 128) + 128);
+      if (invert) g = 255 - g;
+      d[di] = d[di + 1] = d[di + 2] = g;
+      d[di + 3] = 255;
+    }
   }
 
   ctx.putImageData(out, 0, 0);
@@ -289,7 +298,9 @@ function buildWoodMesh(heightmap, rows, cols, params) {
   }
 
   const xAt = j => (j / (cols - 1)) * W  - W  / 2;
-  const zAt = i => (i / (rows - 1)) * Dz - Dz / 2;
+  // Z reversed so image top (high row index) maps to –Z (far side from camera),
+  // matching the original photo orientation when viewed from the default camera angle.
+  const zAt = i => Dz / 2 - (i / (rows - 1)) * Dz;
   const yAt = (i, j) => TH - heightmap[i * cols + j] * CUT;
 
   const woodMat  = new THREE.MeshPhongMaterial({ color: 0x7a4f21, shininess: 6 });
@@ -368,14 +379,16 @@ function buildWoodMesh(heightmap, rows, cols, params) {
     woodGroup.add(new THREE.Mesh(geo, woodMat));
   }
 
-  // Front wall  (i=0,      Z=-Dz/2, traverse j→ X increasing)
-  addWall(Array.from({ length: cols }, (_, j) => ({ x: xAt(j),  y: yAt(0,      j), z: -Dz / 2 })), "-");
-  // Back wall   (i=rows-1, Z=+Dz/2, traverse j→ X increasing)
-  addWall(Array.from({ length: cols }, (_, j) => ({ x: xAt(j),  y: yAt(rows-1, j), z:  Dz / 2 })), "+");
-  // Left wall   (j=0,      X=-W/2,  traverse i→ Z increasing)
-  addWall(Array.from({ length: rows }, (_, i) => ({ x: -W / 2,  y: yAt(i, 0),      z: zAt(i)  })), "+");
-  // Right wall  (j=cols-1, X=+W/2,  traverse i→ Z increasing)
-  addWall(Array.from({ length: rows }, (_, i) => ({ x:  W / 2,  y: yAt(i, cols-1), z: zAt(i)  })), "-");
+  // With reversed zAt: i=0 → Z=+Dz/2, i=rows-1 → Z=-Dz/2
+  // Windings updated so outward normals remain correct after the Z-axis reversal.
+  // Front wall  (i=0,      Z=+Dz/2, outward +Z)
+  addWall(Array.from({ length: cols }, (_, j) => ({ x: xAt(j),  y: yAt(0,      j), z:  Dz / 2 })), "+");
+  // Back wall   (i=rows-1, Z=-Dz/2, outward -Z)
+  addWall(Array.from({ length: cols }, (_, j) => ({ x: xAt(j),  y: yAt(rows-1, j), z: -Dz / 2 })), "-");
+  // Left wall   (j=0,      X=-W/2,  outward -X) — Z now decreases as i increases
+  addWall(Array.from({ length: rows }, (_, i) => ({ x: -W / 2,  y: yAt(i, 0),      z: zAt(i)  })), "-");
+  // Right wall  (j=cols-1, X=+W/2,  outward +X) — Z now decreases as i increases
+  addWall(Array.from({ length: rows }, (_, i) => ({ x:  W / 2,  y: yAt(i, cols-1), z: zAt(i)  })), "+");
 
   scene.add(woodGroup);
 
@@ -386,8 +399,9 @@ function buildWoodMesh(heightmap, rows, cols, params) {
   grid.position.y = -0.5;
   scene.add(grid);
 
-  camera.position.set(W * 0.6, TH + maxDim * 0.8, Dz * 0.95);
-  controls.target.set(0, TH * 0.4, 0);
+  // Camera at +Z, centered in X → screen right = +X, image orientation matches photo
+  camera.position.set(0, TH + maxDim * 1.0, Dz * 0.9);
+  controls.target.set(0, TH * 0.3, 0);
   controls.update();
 }
 
@@ -465,9 +479,11 @@ dropZone.addEventListener("drop", e => {
 });
 fileInput.addEventListener("change", () => { if (fileInput.files[0]) loadImage(fileInput.files[0]); });
 
-ctrlBrightness.addEventListener("input", updatePreview);
+ctrlBrightness.addEventListener("input",  updatePreview);
 ctrlContrast.addEventListener("input",   updatePreview);
 ctrlInvert.addEventListener("change",    updatePreview);
+ctrlFlipH.addEventListener("change",     updatePreview);
+ctrlFlipV.addEventListener("change",     updatePreview);
 
 pWidth.addEventListener("input", () => { syncMM(pWidth); updateHeightParam(); });
 
