@@ -10,7 +10,7 @@ from app.gcode_generator import generate_gcode
 from app.image_processor import process_image_to_heightmap
 from app.stl_generator import generate_stl
 
-app = FastAPI(title="Molino", version="0.11")
+app = FastAPI(title="Molino", version="0.12")
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
