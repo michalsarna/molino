@@ -4,6 +4,12 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.08
+
+- **Image orientation fixed** — heightmap rows were mapped so image-top landed at Y=0 (the near/bottom of the standard top-down view), making the carving appear upside-down / mirrored; rows are now flipped in `image_processor` so image-top maps to the far/high-Y end, matching the original photo orientation in the STL, G-code, and 3D preview
+
+---
+
 ## v0.07
 
 - **STL bottom face fixed** — bottom face had inverted winding (+Z instead of −Z normal), causing slicers and viewers to render the solid mirrored; all six faces now have verified outward normals
