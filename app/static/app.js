@@ -254,80 +254,118 @@ function buildWoodMesh(heightmap, rows, cols, params) {
   if (woodGroup) {
     scene.remove(woodGroup);
     woodGroup.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+    woodGroup = null;
   }
 
-  // Coordinate system: Y-up (Three.js default)
-  //   j (image column) → X axis
-  //   i (image row)    → Z axis
-  //   carving depth    → Y axis (up = uncut surface)
-  const W  = params.width_mm;
-  const Dz = params.height_mm;   // image height mapped to Z
+  // Y-up coordinate system (Three.js default):
+  //   j (image column) → X axis  [-W/2, W/2]
+  //   i (image row)    → Z axis  [-Dz/2, Dz/2]
+  //   carving depth    → Y axis  (Y=TH → uncut top, Y=TH-CUT → deepest cut)
+  const W   = params.width_mm;
+  const Dz  = params.height_mm;
   const CUT = params.cut_depth;
   const TH  = params.wood_thickness;
 
-  // ── Carved top surface ────────────────────────────────────────────
-  const pos = new Float32Array(rows * cols * 3);
-  const col = new Float32Array(rows * cols * 3);
-  const idx = [];
+  const xAt = j => (j / (cols - 1)) * W  - W  / 2;
+  const zAt = i => (i / (rows - 1)) * Dz - Dz / 2;
+  const yAt = (i, j) => TH - heightmap[i * cols + j] * CUT;
 
-  for (let i = 0; i < rows; i++) {
-    for (let j = 0; j < cols; j++) {
-      const k = i * cols + j;
-      // Centre geometry on origin for comfortable orbiting
-      pos[k * 3]     = (j / (cols - 1)) * W - W / 2;    // X: [-W/2, W/2]
-      pos[k * 3 + 1] = TH - heightmap[k] * CUT;          // Y: [TH-CUT, TH]
-      pos[k * 3 + 2] = (i / (rows - 1)) * Dz - Dz / 2;  // Z: [-Dz/2, Dz/2]
-      const t = heightmap[k];
-      col[k * 3]     = 0.72 - t * 0.25;  // R
-      col[k * 3 + 1] = 0.50 - t * 0.20;  // G
-      col[k * 3 + 2] = 0.24 - t * 0.10;  // B
-    }
-  }
-
-  // Winding for +Y normals in XZ surface:
-  //   a,c,b gives normal = +Y  (verified: (C-A)×(B-A) = +Y)
-  //   b,c,d gives normal = +Y
-  for (let i = 0; i < rows - 1; i++) {
-    for (let j = 0; j < cols - 1; j++) {
-      const a = i * cols + j, b = a + 1,
-            c = (i + 1) * cols + j, d = c + 1;
-      idx.push(a, c, b,  b, c, d);
-    }
-  }
-
-  const topGeo = new THREE.BufferGeometry();
-  topGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  topGeo.setAttribute("color",    new THREE.BufferAttribute(col, 3));
-  topGeo.setIndex(idx);
-  topGeo.computeVertexNormals();
-
-  const topMesh = new THREE.Mesh(
-    topGeo,
-    new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 35, side: THREE.FrontSide })
-  );
-
-  // ── Solid wood base ───────────────────────────────────────────────
-  // Full block from Y=0 to Y=TH; polygonOffset pushes it back so the
-  // carved surface (Y≤TH) wins where they overlap (uncut areas at Y=TH).
-  const baseGeo = new THREE.BoxGeometry(W, TH, Dz);
-  const baseMat = new THREE.MeshPhongMaterial({
-    color: 0x8b5a28,
-    shininess: 8,
-    polygonOffset: true,
-    polygonOffsetFactor: 2,
-    polygonOffsetUnits: 2,
-  });
-  const baseMesh = new THREE.Mesh(baseGeo, baseMat);
-  baseMesh.position.set(0, TH / 2, 0);  // Y: 0 → TH
+  const woodMat  = new THREE.MeshPhongMaterial({ color: 0x7a4f21, shininess: 6 });
+  const carveMat = new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 35 });
 
   woodGroup = new THREE.Group();
-  woodGroup.add(baseMesh, topMesh);
+
+  // ── 1. Carved top surface (XZ plane, +Y normals) ─────────────────
+  {
+    const n   = rows * cols;
+    const pos = new Float32Array(n * 3);
+    const col = new Float32Array(n * 3);
+    const idx = [];
+
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < cols; j++) {
+        const k = i * cols + j;
+        pos[k * 3]     = xAt(j);
+        pos[k * 3 + 1] = yAt(i, j);
+        pos[k * 3 + 2] = zAt(i);
+        const t = heightmap[k];
+        col[k * 3]     = 0.72 - t * 0.28;
+        col[k * 3 + 1] = 0.50 - t * 0.22;
+        col[k * 3 + 2] = 0.24 - t * 0.12;
+      }
+    }
+    // Winding a,c,b / b,c,d → cross product gives +Y normals
+    for (let i = 0; i < rows - 1; i++) {
+      for (let j = 0; j < cols - 1; j++) {
+        const a = i * cols + j, b = a + 1, c = (i + 1) * cols + j, d = c + 1;
+        idx.push(a, c, b,  b, c, d);
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("color",    new THREE.BufferAttribute(col, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    woodGroup.add(new THREE.Mesh(geo, carveMat));
+  }
+
+  // ── 2. Bottom face (Y=0, -Y normal) ─────────────────────────────
+  {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array([
+      -W/2, 0, -Dz/2,   W/2, 0, -Dz/2,   W/2, 0,  Dz/2,  -W/2, 0,  Dz/2,
+    ]), 3));
+    geo.setIndex([0, 1, 2,  0, 2, 3]);   // -Y normal
+    geo.computeVertexNormals();
+    woodGroup.add(new THREE.Mesh(geo, woodMat));
+  }
+
+  // ── 3. Side walls: top edge follows carved surface, bottom at Y=0 ─
+  // addWall(topPts, winding) where:
+  //   topPts = [{x,y,z}] ordered along the edge
+  //   '+' winding → indices (a,c,d / a,d,b)
+  //   '-' winding → indices (a,b,d / a,d,c)
+  // Verified windings:
+  //   Front (Z=-Dz/2, -Z outward): '-'   Back  (Z=+Dz/2, +Z outward): '+'
+  //   Left  (X=-W/2,  -X outward): '+'   Right (X=+W/2,  +X outward): '-'
+  function addWall(topPts, winding) {
+    const n = topPts.length;
+    const flat = [];
+    for (const p of topPts)  flat.push(p.x, p.y, p.z);       // top row
+    for (const p of topPts)  flat.push(p.x, 0,   p.z);       // bottom row
+    const idx = [];
+    for (let k = 0; k < n - 1; k++) {
+      const a = k, b = k + 1, c = n + k, d = n + k + 1;
+      if (winding === "+") idx.push(a, c, d,  a, d, b);
+      else                  idx.push(a, b, d,  a, d, c);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(flat), 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    woodGroup.add(new THREE.Mesh(geo, woodMat));
+  }
+
+  // Front wall  (i=0,      Z=-Dz/2, traverse j→ X increasing)
+  addWall(Array.from({ length: cols }, (_, j) => ({ x: xAt(j),  y: yAt(0,      j), z: -Dz / 2 })), "-");
+  // Back wall   (i=rows-1, Z=+Dz/2, traverse j→ X increasing)
+  addWall(Array.from({ length: cols }, (_, j) => ({ x: xAt(j),  y: yAt(rows-1, j), z:  Dz / 2 })), "+");
+  // Left wall   (j=0,      X=-W/2,  traverse i→ Z increasing)
+  addWall(Array.from({ length: rows }, (_, i) => ({ x: -W / 2,  y: yAt(i, 0),      z: zAt(i)  })), "+");
+  // Right wall  (j=cols-1, X=+W/2,  traverse i→ Z increasing)
+  addWall(Array.from({ length: rows }, (_, i) => ({ x:  W / 2,  y: yAt(i, cols-1), z: zAt(i)  })), "-");
+
   scene.add(woodGroup);
 
-  // Camera: Y-up, 3/4 angle above the front edge
-  const maxDim = Math.max(W, Dz, TH);
-  camera.position.set(W * 0.55, TH + maxDim * 0.85, Dz * 0.9);
-  controls.target.set(0, TH * 0.45, 0);
+  // Subtle ground grid for depth reference
+  scene.children.filter(c => c.isGridHelper).forEach(g => scene.remove(g));
+  const maxDim = Math.max(W, Dz);
+  const grid = new THREE.GridHelper(maxDim * 3, 16, 0x2a2d32, 0x1e2124);
+  grid.position.y = -0.5;
+  scene.add(grid);
+
+  camera.position.set(W * 0.6, TH + maxDim * 0.8, Dz * 0.95);
+  controls.target.set(0, TH * 0.4, 0);
   controls.update();
 }
 
@@ -436,3 +474,9 @@ btnBack3.addEventListener("click", () => showStep(2));
 
 btnDlStl.addEventListener("click",   () => downloadFile("/api/download/stl",   "molino_carve.stl"));
 btnDlGcode.addEventListener("click", () => downloadFile("/api/download/gcode", "molino_carve.gcode"));
+
+// ── Version display ────────────────────────────────────────────────────────
+fetch("/api/info")
+  .then(r => r.json())
+  .then(({ version }) => { document.querySelector(".version").textContent = `v${version}`; })
+  .catch(() => {});

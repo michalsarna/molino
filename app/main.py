@@ -10,7 +10,7 @@ from app.gcode_generator import generate_gcode
 from app.image_processor import process_image_to_heightmap
 from app.stl_generator import generate_stl
 
-app = FastAPI(title="Molino", version="0.03")
+app = FastAPI(title="Molino", version="0.05")
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -22,6 +22,11 @@ GCODE_MAX = 2000
 class GenerateRequest(BaseModel):
     image_data: str           # base64 data-URL or raw base64
     params: dict[str, Any] = {}
+
+
+@app.get("/api/info")
+async def info():
+    return {"version": app.version, "title": app.title}
 
 
 @app.get("/")
