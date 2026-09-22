@@ -4,6 +4,13 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.24
+
+- **Descriptive G-code file name** — includes carve size and tool in the active unit system, e.g. `molino_v0.24_photo_200x150mm_vbit60deg-3.175mm.gcode` or `…_8x6in_ballnose-0.25in.gcode`
+- **Version bumped to 0.24**
+
+---
+
 ## v0.23
 
 - **Accurate tool footprints** — tool-offset and simulation now use true Euclidean profiles instead of separable square/Manhattan approximations. An end mill is a disc (the square version blocked the tool 41 % too far from diagonal and curved edges); a V-bit is a cone **truncated at the cutter radius** (the old infinite cone let a 3.175 mm bit be constrained by neighbours 5.8 mm away). Both shrink the unreachable bands along shape edges — this, not path direction, is what limits how close a given tool gets to a side
