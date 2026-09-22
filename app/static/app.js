@@ -44,6 +44,7 @@ const pBitType  = document.getElementById("p-bit-type");
 const rowTip    = document.getElementById("row-tip-angle");
 const loadingOverlay = document.getElementById("loading-overlay");
 const exportInfo     = document.getElementById("export-info");
+const ctrlToolPath   = document.getElementById("ctrl-toolpath");
 
 // ── Step navigation ───────────────────────────────────────────────────────
 function showStep(n) {
@@ -219,7 +220,7 @@ function collectParams() {
 }
 
 // ── 3D Viewer ─────────────────────────────────────────────────────────────
-let renderer, scene, camera, controls, woodGroup, viewerRaf = 0;
+let renderer, scene, camera, controls, woodGroup, toolPath, viewerRaf = 0;
 
 window.addEventListener("resize", () => {
   if (!renderer) return;
@@ -274,11 +275,16 @@ function initViewer() {
   animate();
 }
 
-function buildWoodMesh(heightmap, rows, cols, params) {
+function buildWoodMesh(heightmap, rawHeightmap, rows, cols, params) {
   if (woodGroup) {
     scene.remove(woodGroup);
     woodGroup.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
     woodGroup = null;
+  }
+  if (toolPath) {
+    toolPath.geometry.dispose();
+    toolPath.material.dispose();
+    toolPath = null;
   }
 
   // Y-up coordinate system (Three.js default):
@@ -291,12 +297,15 @@ function buildWoodMesh(heightmap, rows, cols, params) {
   const CUT = params.cut_depth;
   const TH  = params.wood_thickness;
 
-  // Pad heightmap with uncarved border so the carved image floats inside the wood block
+  // Pad heightmap with uncarved border so the carved image floats inside the wood block.
+  // srcRows/srcCols and mi/mj are kept so the tool path can address the unpadded grid.
+  const srcRows = rows, srcCols = cols;
+  let mi, mj;
   {
     const pxX = W  / Math.max(cols - 1, 1);
     const pxZ = Dz / Math.max(rows - 1, 1);
-    const mj  = Math.max(1, Math.round(MARGIN / pxX));
-    const mi  = Math.max(1, Math.round(MARGIN / pxZ));
+    mj  = Math.max(1, Math.round(MARGIN / pxX));
+    mi  = Math.max(1, Math.round(MARGIN / pxZ));
     const nc  = cols + 2 * mj;
     const nr  = rows + 2 * mi;
     const pad = new Float32Array(nc * nr); // zeros = no cut
@@ -404,6 +413,26 @@ function buildWoodMesh(heightmap, rows, cols, params) {
 
   scene.add(woodGroup);
 
+  // ── 4. Tool-tip path: programmed depth along each raster row (cutting moves only) ──
+  // Lifted 0.15 mm above the surface so it doesn't z-fight where tip depth == surface.
+  {
+    const tipY = (i, j) => TH - rawHeightmap[i * srcCols + j] * CUT + 0.15;
+    const pts  = new Float32Array(srcRows * (srcCols - 1) * 6);
+    let k = 0;
+    for (let i = 0; i < srcRows; i++) {
+      const z = zAt(i + mi);
+      for (let j = 0; j < srcCols - 1; j++) {
+        pts[k++] = xAt(j + mj);     pts[k++] = tipY(i, j);     pts[k++] = z;
+        pts[k++] = xAt(j + 1 + mj); pts[k++] = tipY(i, j + 1); pts[k++] = z;
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pts, 3));
+    toolPath = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xff2020 }));
+    toolPath.visible = ctrlToolPath.checked;
+    scene.add(toolPath);
+  }
+
   // Subtle ground grid for depth reference
   scene.children.filter(c => c.isGridHelper).forEach(g => scene.remove(g));
   const maxDim = Math.max(W, Dz);
@@ -442,7 +471,7 @@ async function generatePreview() {
     const data = await res.json();
 
     initViewer();
-    buildWoodMesh(data.heightmap, data.rows, data.cols, p);
+    buildWoodMesh(data.heightmap, data.raw_heightmap, data.rows, data.cols, p);
     state.previewGenerated = true;
 
     const stepOver      = p.step_over;
@@ -536,6 +565,10 @@ btnGenerate.addEventListener("click", async () => {
 });
 
 btnBack3.addEventListener("click", () => showStep(2));
+
+ctrlToolPath.addEventListener("change", () => {
+  if (toolPath) toolPath.visible = ctrlToolPath.checked;
+});
 
 btnDlStl.addEventListener("click",   () => downloadFile("/api/download/stl",   `molino_v${state.version}_${state.originalFileName}_carve.stl`));
 btnDlGcode.addEventListener("click", () => downloadFile("/api/download/gcode", `molino_v${state.version}_${state.originalFileName}_carve.gcode`));

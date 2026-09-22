@@ -4,6 +4,14 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.16
+
+- **Tool-tip path overlay** — toggle in the 3D preview (top-right of the viewer) draws the programmed path of the cutting tool's tip in red along every raster row; shows the exact depth the G-code commands, as opposed to the wider surface the bit leaves behind (visible as the gap between red line and carved surface with V-bits / end mills)
+- `/api/preview` now returns `raw_heightmap` (programmed depth) alongside the simulated `heightmap`
+- **Version bumped to 0.16**
+
+---
+
 ## v0.15
 
 - **Full code review & refactor**
