@@ -30,6 +30,11 @@ const ctrlFlipH      = document.getElementById("ctrl-flip-h");
 const ctrlFlipV      = document.getElementById("ctrl-flip-v");
 const valBrightness  = document.getElementById("val-brightness");
 const valContrast    = document.getElementById("val-contrast");
+const ctrlNoCut      = document.getElementById("ctrl-nocut");
+const ctrlMaxCut     = document.getElementById("ctrl-maxcut");
+const valNoCut       = document.getElementById("val-nocut");
+const valMaxCut      = document.getElementById("val-maxcut");
+const legendBar      = document.getElementById("legend-bar");
 
 const btnNext1    = document.getElementById("btn-next-1");
 const btnBack2    = document.getElementById("btn-back-2");
@@ -107,6 +112,16 @@ function updatePreview() {
   valBrightness.textContent = brightness >= 0 ? `+${brightness}` : brightness;
   valContrast.textContent   = contrast   >= 0 ? `+${contrast}`   : contrast;
 
+  // Levels. Handles are in "darkness" (0 = white, 255 = black) to match the bar's direction;
+  // gray >= white is no cut, gray <= black is max cut, linear in between.
+  const dNoCut = parseInt(ctrlNoCut.value), dMaxCut = parseInt(ctrlMaxCut.value);
+  const white  = 255 - dNoCut, black = 255 - dMaxCut;
+  const lvScale = 255 / (white - black);
+  valNoCut.textContent  = `≥ ${white}`;
+  valMaxCut.textContent = `≤ ${black}`;
+  legendBar.style.background =
+    `linear-gradient(to right, #fff ${dNoCut / 2.55}%, #000 ${dMaxCut / 2.55}%)`;
+
   const cf = (259 * (contrast + 255)) / (255 * (259 - contrast));
   const w = state.origWidth, h = state.origHeight;
   previewCanvas.width = w; previewCanvas.height = h;
@@ -125,6 +140,7 @@ function updatePreview() {
       g = clamp(g + brightness);
       g = clamp(cf * (g - 128) + 128);
       if (invert) g = 255 - g;
+      g = clamp((g - black) * lvScale);
       d[di] = d[di + 1] = d[di + 2] = g;
       d[di + 3] = 255;
     }
@@ -566,6 +582,16 @@ ctrlContrast.addEventListener("input",   schedulePreview);
 ctrlInvert.addEventListener("change",    schedulePreview);
 ctrlFlipH.addEventListener("change",     schedulePreview);
 ctrlFlipV.addEventListener("change",     schedulePreview);
+
+// Keep the no-cut handle strictly left of the max-cut handle
+ctrlNoCut.addEventListener("input", () => {
+  if (+ctrlNoCut.value >= +ctrlMaxCut.value) ctrlNoCut.value = +ctrlMaxCut.value - 1;
+  schedulePreview();
+});
+ctrlMaxCut.addEventListener("input", () => {
+  if (+ctrlMaxCut.value <= +ctrlNoCut.value) ctrlMaxCut.value = +ctrlNoCut.value + 1;
+  schedulePreview();
+});
 
 // Keep data-mm in sync on all editable unit-aware inputs; width also drives height
 document.querySelectorAll("input[data-unit]:not([readonly])").forEach(el => {

@@ -231,21 +231,52 @@ h2 {
 .toggle-label input:checked ~ .toggle { background: var(--primary); }
 .toggle-label input:checked ~ .toggle::after { left: 19px; background: #000; }
 
-/* Depth legend */
+/* Depth legend with no-cut / max-cut level handles */
 .depth-legend { margin-top: 4px; }
+.legend-bar-wrap { position: relative; height: 14px; }
 .legend-bar {
-  height: 10px;
+  position: absolute; inset: 0;
   border-radius: 4px;
   background: linear-gradient(to right, #fff, #000);
   border: 1px solid var(--border);
+}
+.legend-range {
+  -webkit-appearance: none;
+  appearance: none;
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  margin: 0;
+  background: transparent;
+  pointer-events: none;   /* only the thumbs are interactive so both handles can overlap */
+  outline: none;
+}
+.legend-range::-webkit-slider-runnable-track { background: transparent; }
+.legend-range::-moz-range-track { background: transparent; }
+.legend-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 14px; height: 18px;
+  border-radius: 3px;
+  background: var(--primary);
+  border: 1px solid #000;
+  cursor: ew-resize;
+}
+.legend-range::-moz-range-thumb {
+  pointer-events: auto;
+  width: 12px; height: 16px;
+  border-radius: 3px;
+  background: var(--primary);
+  border: 1px solid #000;
+  cursor: ew-resize;
 }
 .legend-labels {
   display: flex;
   justify-content: space-between;
   font-size: 11px;
   color: var(--muted);
-  margin-top: 3px;
+  margin-top: 5px;
 }
+.legend-labels b { color: var(--text); font-weight: 600; margin-left: 4px; }
 
 /* ── Units bar ───────────────────────────────────────────────────── */
 .units-bar {
