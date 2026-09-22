@@ -19,10 +19,12 @@ class CarveParams(BaseModel):
     bit_diameter: float = Field(3.175, gt=0)
     tip_angle:    float = Field(60.0, gt=0, lt=180)
 
-    spindle_speed: int   = Field(12000, ge=100)
-    feed_rate:     float = Field(1000.0, gt=0)
-    plunge_rate:   float = Field(300.0, gt=0)
-    safe_height:   float = Field(5.0, gt=0)
+    spindle_speed:  int   = Field(12000, ge=100)
+    feed_rate:      float = Field(1000.0, gt=0)
+    plunge_rate:    float = Field(300.0, gt=0)
+    rapid_rate:     float = Field(3000.0, gt=0)
+    safe_height:    float = Field(5.0, gt=0)     # clearance at program start/end
+    retract_height: float = Field(1.0, gt=0)     # clearance for hops inside the carve area
 
     units: Literal["metric", "imperial"] = "metric"
 

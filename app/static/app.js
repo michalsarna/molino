@@ -230,7 +230,9 @@ function collectParams() {
     spindle_speed:  parseInt(document.getElementById("p-spindle").value),
     feed_rate:      mm("p-feed"),
     plunge_rate:    mm("p-plunge"),
+    rapid_rate:     mm("p-rapid"),
     safe_height:    mm("p-safe-h"),
+    retract_height: mm("p-retract"),
     units:          state.units,
     origin:         document.querySelector('input[name="origin"]:checked').value,
   };
@@ -515,13 +517,10 @@ async function generatePreview() {
     state.previewGenerated = true;
 
     const stepOver      = p.step_over;
-    const rasterLines   = Math.ceil(p.height_mm / stepOver);
-    const depthPasses   = Math.ceil(p.cut_depth / (p.depth_per_pass || p.cut_depth));
-    const cutTimeMin    = rasterLines * depthPasses * p.width_mm / p.feed_rate;
-    const plungeTimeMin = rasterLines * depthPasses * p.safe_height / p.plunge_rate;
-    const totalMin      = cutTimeMin + plungeTimeMin;
-    const estHours      = Math.floor(totalMin / 60);
-    const estMins       = Math.round(totalMin % 60);
+    const rasterLines   = data.raster_lines;
+    const depthPasses   = data.passes;
+    const estHours      = Math.floor(data.estimate_min / 60);
+    const estMins       = Math.round(data.estimate_min % 60);
     const timeLabel     = estHours > 0
       ? `${estHours}h ${String(estMins).padStart(2, "0")}m`
       : `${estMins}m`;

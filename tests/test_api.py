@@ -36,6 +36,7 @@ def test_preview_returns_grid_matching_aspect(png_b64):
     assert body["cols"] == 200 and body["rows"] == 100
     assert len(body["heightmap"]) == 200 * 100
     assert len(body["raw_heightmap"]) == 200 * 100
+    assert body["estimate_min"] > 0 and body["passes"] >= 1 and body["raster_lines"] >= 10
     # Tool dilation can only deepen the surface, never lift it above the programmed tip depth
     assert all(h >= r - 1e-6 for h, r in zip(body["heightmap"], body["raw_heightmap"]))
 

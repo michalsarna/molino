@@ -13,6 +13,7 @@ from app.gcode_generator import generate_gcode
 from app.image_processor import apply_tool_geometry, process_image_to_heightmap
 from app.params import CarveParams
 from app.stl_generator import generate_stl
+from app.toolpath import plan_toolpath, quantise
 
 app = FastAPI(title="Molino", version=__version__)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -61,12 +62,22 @@ async def preview(req: GenerateRequest):
                  else (max(1, int(PREVIEW_RES * aspect)), PREVIEW_RES)
 
     raw = _load_heightmap(req, cols, rows)
-    hm  = apply_tool_geometry(raw, p, p.width_mm / max(cols - 1, 1), p.height_mm / max(rows - 1, 1))
+    x_step, y_step = p.width_mm / max(cols - 1, 1), p.height_mm / max(rows - 1, 1)
+    hm  = apply_tool_geometry(raw, p, x_step, y_step)
+
+    # Plan at preview resolution, then scale to the real raster line count
+    plan = plan_toolpath(quantise(raw, p.cut_depth), p, x_step, y_step)
+    real_rows = _grid(p.width_mm, p.height_mm, p.step_over, 10, GCODE_MAX)[1]
+    estimate_min = plan.minutes(p) * real_rows / rows + 2 / 60
+
     return {
         "heightmap":     hm.flatten().tolist(),    # simulated machined surface
         "raw_heightmap": raw.flatten().tolist(),   # programmed tip depth (what G-code follows)
         "rows": rows,
         "cols": cols,
+        "raster_lines": real_rows,
+        "passes": plan.passes,
+        "estimate_min": estimate_min,
     }
 
 

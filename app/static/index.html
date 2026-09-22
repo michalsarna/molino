@@ -179,8 +179,16 @@
             <input type="number" id="p-plunge" value="300" min="0.01" step="any" data-unit="rate" data-mm="300" />
           </label>
           <label>
+            Rapid rate <span class="unit-label">(mm/min)</span>
+            <input type="number" id="p-rapid" value="3000" min="0.01" step="any" data-unit="rate" data-mm="3000" />
+          </label>
+          <label>
             Safe height <span class="unit-label">(mm)</span>
             <input type="number" id="p-safe-h" value="5.0" min="0.001" step="any" data-unit="length" data-mm="5.0" />
+          </label>
+          <label title="Clearance used for short moves inside the carve area; safe height is used at start and end">
+            Retract height <span class="unit-label">(mm)</span>
+            <input type="number" id="p-retract" value="1.0" min="0.001" step="any" data-unit="length" data-mm="1.0" />
           </label>
           <div class="origin-picker">
             <span>Work origin (X0 Y0)</span>
