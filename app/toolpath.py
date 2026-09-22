@@ -43,9 +43,9 @@ class Plan:
                 + self.plunge_mm / p.plunge_rate)
 
 
-def quantise(heightmap: np.ndarray, cut_depth: float) -> np.ndarray:
-    """Heightmap [0,1] -> depth in mm on the Z_STEP grid."""
-    return np.round(heightmap * cut_depth / Z_STEP) * Z_STEP
+def quantise(depth_mm: np.ndarray) -> np.ndarray:
+    """Snap depths (mm) to the Z_STEP grid."""
+    return np.round(depth_mm / Z_STEP) * Z_STEP
 
 
 def origin_offset(p: CarveParams) -> tuple[float, float]:

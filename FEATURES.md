@@ -4,6 +4,16 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.21
+
+- **True tool-offset paths** — the G-code now drives the tool *centre* along the image eroded by the tool profile (min-filter with a flat disc for end mills, a cone for V-bits), so the bit never cuts below the target anywhere under its footprint. A V-bit stays shallow next to a white edge instead of flaring into it; an end mill can't enter features narrower than its diameter and leaves them uncut. Path, run time and file therefore change with bit diameter and tip angle
+- **Simulation is now the opening** — preview and STL show dilate(erode(target)): the material the tool genuinely leaves, including rounded corners and uncut narrow detail
+- Preview returns `path_heightmap` (tool-centre depth) instead of the raw image depth; the red overlay follows it
+- G-code header notes the tool-offset behaviour
+- **Version bumped to 0.21**
+
+---
+
 ## v0.20
 
 - **Stroke-following planner** — the pass is now a walk over segments rather than a row raster. From the end of a segment the tool rolls into the overlapping segment on the row above or below and keeps going (this traces strokes in line art and serpentines solid areas); only when nothing is reachable does it retract and hop to the nearest unvisited segment. Line drawings no longer get hopped across on every row

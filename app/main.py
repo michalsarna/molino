@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from app import __version__
 from app.gcode_generator import generate_gcode
-from app.image_processor import apply_tool_geometry, process_image_to_heightmap
+from app.image_processor import machined_surface, process_image_to_heightmap, tool_path_depths
 from app.params import CarveParams
 from app.stl_generator import generate_stl
 from app.toolpath import plan_toolpath, preview_paths, quantise
@@ -63,16 +63,17 @@ async def preview(req: GenerateRequest):
 
     raw = _load_heightmap(req, cols, rows)
     x_step, y_step = p.width_mm / max(cols - 1, 1), p.height_mm / max(rows - 1, 1)
-    hm  = apply_tool_geometry(raw, p, x_step, y_step)
+    path = quantise(tool_path_depths(raw * p.cut_depth, p, x_step, y_step))   # tool-centre depth, mm
+    sim  = machined_surface(path, p, x_step, y_step) / p.cut_depth             # what the carve will look like
 
     # Plan at preview resolution, then scale to the real raster line count
-    plan = plan_toolpath(quantise(raw, p.cut_depth), p, x_step, y_step)
+    plan = plan_toolpath(path, p, x_step, y_step)
     real_rows = _grid(p.width_mm, p.height_mm, p.step_over, 10, GCODE_MAX)[1]
     estimate_min = plan.minutes(p) * real_rows / rows + 2 / 60
 
     return {
-        "heightmap":     hm.flatten().tolist(),    # simulated machined surface
-        "raw_heightmap": raw.flatten().tolist(),   # programmed tip depth (what G-code follows)
+        "heightmap":      sim.flatten().tolist(),                    # simulated machined surface
+        "path_heightmap": (path / p.cut_depth).flatten().tolist(),   # tool-centre depth the G-code follows
         "rows": rows,
         "cols": cols,
         "raster_lines": real_rows,

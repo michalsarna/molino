@@ -35,13 +35,14 @@ def test_preview_returns_grid_matching_aspect(png_b64):
     body = r.json()
     assert body["cols"] == 200 and body["rows"] == 100
     assert len(body["heightmap"]) == 200 * 100
-    assert len(body["raw_heightmap"]) == 200 * 100
+    assert len(body["path_heightmap"]) == 200 * 100
     assert body["estimate_min"] > 0 and body["passes"] >= 1 and body["raster_lines"] >= 10
     tp = body["toolpath"]
     assert tp["cuts"] and all(len(poly) >= 5 and (len(poly) - 1) % 2 == 0 for poly in tp["cuts"])
     assert all(len(h) == 4 for h in tp["hops"])
     # Tool dilation can only deepen the surface, never lift it above the programmed tip depth
-    assert all(h >= r - 1e-6 for h, r in zip(body["heightmap"], body["raw_heightmap"]))
+    # Machined surface is the tool path dilated by the tool, so never shallower than the path
+    assert all(h >= r - 1e-6 for h, r in zip(body["heightmap"], body["path_heightmap"]))
 
 
 def test_invalid_image_is_a_400():

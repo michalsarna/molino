@@ -2,7 +2,7 @@
 
 > **Photo → CNC wood carving** — upload a photo, tune it, and get a G-code toolpath and STL model ready to carve.
 
-[![Live](https://img.shields.io/badge/version-0.20-amber)](https://github.com/michalsarna/molino)
+[![Live](https://img.shields.io/badge/version-0.21-amber)](https://github.com/michalsarna/molino)
 
 ## What it does
 
