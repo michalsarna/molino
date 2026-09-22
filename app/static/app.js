@@ -294,7 +294,7 @@ function initViewer() {
   animate();
 }
 
-function buildWoodMesh(heightmap, rawHeightmap, toolpath, rows, cols, params) {
+function buildWoodMesh(heightmap, pathHeightmap, toolpath, rows, cols, params) {
   if (woodGroup) {
     scene.remove(woodGroup);
     woodGroup.traverse(o => { if (o.geometry) { o.geometry.dispose(); o.material.dispose(); } });
@@ -439,7 +439,7 @@ function buildWoodMesh(heightmap, rawHeightmap, toolpath, rows, cols, params) {
     const ysSrc = params.height_mm / Math.max(srcRows - 1, 1);
     const colOf = x => Math.min(srcCols - 1, Math.max(0, Math.round(x / xsSrc)));
     const rowOf = y => Math.min(srcRows - 1, Math.max(0, Math.round(y / ysSrc)));
-    const tipY  = (i, j, pmax) => TH - Math.min(rawHeightmap[i * srcCols + j] * CUT, pmax) + 0.15;
+    const tipY  = (i, j, pmax) => TH - Math.min(pathHeightmap[i * srcCols + j] * CUT, pmax) + 0.15;
 
     const expand = polys => {
       const out = [];
@@ -541,7 +541,7 @@ async function generatePreview() {
     const data = await res.json();
 
     initViewer();
-    buildWoodMesh(data.heightmap, data.raw_heightmap, data.toolpath, data.rows, data.cols, p);
+    buildWoodMesh(data.heightmap, data.path_heightmap, data.toolpath, data.rows, data.cols, p);
     state.previewGenerated = true;
 
     const stepOver      = p.step_over;

@@ -7,12 +7,18 @@ from PIL import Image
 from app.params import CarveParams
 
 
-def _dilate_1d(depths: np.ndarray, reach: int, axis: int, drop_per_px: float) -> np.ndarray:
-    """Max-dilation along one axis. A source k px away contributes (value - k*drop_per_px)."""
+def _profile_filter(depths: np.ndarray, reach: int, axis: int, ramp_per_px: float, op) -> np.ndarray:
+    """
+    Separable morphological filter along one axis with a linear tool profile.
+    op=np.minimum → erosion:  a source k px away contributes value + k*ramp (tool may not go deeper)
+    op=np.maximum → dilation: a source k px away contributes value - k*ramp (tool flank cuts there)
+    ramp_per_px = 0 gives a flat (end mill) profile.
+    """
     n = depths.shape[axis]
     pad = [(0, 0), (0, 0)]
     pad[axis] = (reach, reach)
     padded = np.pad(depths, pad, mode="edge")
+    sign = 1.0 if op is np.minimum else -1.0
 
     out = depths.copy()
     for k in range(-reach, reach + 1):
@@ -20,30 +26,44 @@ def _dilate_1d(depths: np.ndarray, reach: int, axis: int, drop_per_px: float) ->
             continue
         sl = [slice(None), slice(None)]
         sl[axis] = slice(reach + k, reach + k + n)
-        np.maximum(out, padded[tuple(sl)] - abs(k) * drop_per_px, out=out)
+        op(out, padded[tuple(sl)] + sign * abs(k) * ramp_per_px, out=out)
     return out
 
 
-def apply_tool_geometry(heightmap: np.ndarray, p: CarveParams,
-                        x_step_mm: float, y_step_mm: float) -> np.ndarray:
-    """
-    Simulate the surface the tool actually leaves. Used for STL and preview only —
-    G-code programs the raw target depth; the physical tool spreading happens on
-    the machine and must not be applied twice.
-    """
+def _kernel(p: CarveParams, x_step: float, y_step: float):
+    """(reach_y_px, reach_x_px, ramp_y_mm_per_px, ramp_x_mm_per_px) describing the tool profile."""
     if p.bit_type == "endmill":
-        # Flat bottom sweeps its full width: square dilation by the bit radius.
         r = p.bit_diameter / 2
-        out = _dilate_1d(heightmap, max(1, round(r / y_step_mm)), 0, 0.0)
-        return _dilate_1d(out, max(1, round(r / x_step_mm)), 1, 0.0)
-
-    # V-bit: cone sides cut neighbours; depth falls off linearly with distance.
+        return max(1, round(r / y_step)), max(1, round(r / x_step)), 0.0, 0.0
     tan_half = math.tan(math.radians(p.tip_angle / 2))
     reach_mm = p.cut_depth * tan_half
-    depths = heightmap * p.cut_depth
-    out = _dilate_1d(depths, max(1, math.ceil(reach_mm / y_step_mm)), 0, y_step_mm / tan_half)
-    out = _dilate_1d(out, max(1, math.ceil(reach_mm / x_step_mm)), 1, x_step_mm / tan_half)
-    return (out / p.cut_depth).astype(heightmap.dtype)
+    return (max(1, math.ceil(reach_mm / y_step)), max(1, math.ceil(reach_mm / x_step)),
+            y_step / tan_half, x_step / tan_half)
+
+
+def tool_path_depths(target_mm: np.ndarray, p: CarveParams, x_step: float, y_step: float) -> np.ndarray:
+    """
+    Tool-centre depth (mm) at every pixel: the deepest the tool may go without cutting below
+    the target anywhere under its footprint. Erosion of the target by the tool profile — this
+    is what the G-code drives, and why narrow or steep features keep material with a big tool.
+    """
+    ry, rx, my, mx = _kernel(p, x_step, y_step)
+    out = _profile_filter(target_mm, ry, 0, my, np.minimum)
+    return _profile_filter(out, rx, 1, mx, np.minimum)
+
+
+def machined_surface(path_mm: np.ndarray, p: CarveParams, x_step: float, y_step: float) -> np.ndarray:
+    """Depth (mm) the tool actually leaves when its centre follows path_mm: dilation by the tool profile."""
+    ry, rx, my, mx = _kernel(p, x_step, y_step)
+    out = _profile_filter(path_mm, ry, 0, my, np.maximum)
+    return _profile_filter(out, rx, 1, mx, np.maximum)
+
+
+def apply_tool_geometry(heightmap: np.ndarray, p: CarveParams, x_step: float, y_step: float) -> np.ndarray:
+    """Normalised heightmap → normalised carved result (opening by the tool). Used for STL/preview."""
+    target = heightmap * p.cut_depth
+    sim = machined_surface(tool_path_depths(target, p, x_step, y_step), p, x_step, y_step)
+    return (sim / p.cut_depth).astype(heightmap.dtype)
 
 
 def process_image_to_heightmap(image_bytes: bytes, cols: int, rows: int) -> np.ndarray:

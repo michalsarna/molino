@@ -1,6 +1,7 @@
 import numpy as np
 
 from app import __version__
+from app.image_processor import tool_path_depths
 from app.params import CarveParams
 from app.toolpath import Z_STEP, origin_offset, plan_toolpath, quantise  # noqa: F401 (Z_STEP re-exported)
 
@@ -22,7 +23,8 @@ def generate_gcode(heightmap: np.ndarray, p: CarveParams) -> str:
     x_step = p.width_mm  / max(cols - 1, 1)
     y_step = p.height_mm / max(rows - 1, 1)
 
-    q    = quantise(heightmap, p.cut_depth)
+    # Tool-centre path: target eroded by the tool profile so the bit never cuts below the image
+    q    = quantise(tool_path_depths(heightmap * p.cut_depth, p, x_step, y_step))
     plan = plan_toolpath(q, p, x_step, y_step)
     x_off, y_off = origin_offset(p)
 
@@ -54,6 +56,7 @@ def generate_gcode(heightmap: np.ndarray, p: CarveParams) -> str:
         f"; Retract height: {_fmt(p.retract_height * f)} {unit} (inside carve), "
         f"safe height {_fmt(p.safe_height * f)} {unit} (start/end)",
         f"; Tool:           {tool}",
+        "; Tool offset:    path is the image eroded by the tool profile (never cuts below target)",
         f"; Work origin:    X0 Y0 at stock {p.origin}, Z0 at stock top",
         f"; Est. run time:  {_hm(minutes)}  "
         f"(cut {dist(plan.cut_mm)} {dunit}, link {dist(plan.link_mm)} {dunit}, "
