@@ -1,27 +1,46 @@
-from typing import Any
+import base64
+import binascii
 
 import numpy as np
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
+from PIL import UnidentifiedImageError
 from pydantic import BaseModel
 
+from app import __version__
 from app.gcode_generator import generate_gcode
-from app.image_processor import process_image_to_heightmap
+from app.image_processor import apply_tool_geometry, process_image_to_heightmap
+from app.params import CarveParams
 from app.stl_generator import generate_stl
 
-app = FastAPI(title="Molino", version="0.14")
-
+app = FastAPI(title="Molino", version=__version__)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-PREVIEW_RES = 200
-STL_RES = 300
-GCODE_MAX = 2000
+PREVIEW_RES  = 200    # max grid size for the 3D preview
+STL_RES      = 300    # max grid size for STL export
+STL_STEP_MM  = 0.5    # target STL grid spacing
+GCODE_MAX    = 2000   # max grid size for G-code
 
 
 class GenerateRequest(BaseModel):
-    image_data: str           # base64 data-URL or raw base64
-    params: dict[str, Any] = {}
+    image_data: str                  # base64 data-URL or raw base64
+    params: CarveParams = CarveParams()
+
+
+def _load_heightmap(req: GenerateRequest, cols: int, rows: int) -> np.ndarray:
+    b64 = req.image_data.split(",", 1)[-1]
+    try:
+        raw = base64.b64decode(b64, validate=True)
+        return process_image_to_heightmap(raw, cols, rows)
+    except (binascii.Error, ValueError, UnidentifiedImageError, OSError):
+        raise HTTPException(status_code=400, detail="image_data is not a valid image")
+
+
+def _grid(width_mm: float, height_mm: float, step_mm: float, lo: int, hi: int) -> tuple[int, int]:
+    cols = max(lo, min(hi, int(width_mm / step_mm)))
+    rows = max(lo, min(hi, int(height_mm / step_mm)))
+    return cols, rows
 
 
 @app.get("/api/info")
@@ -34,68 +53,25 @@ async def index():
     return FileResponse("app/static/index.html")
 
 
-def _decode_image(b64: str) -> bytes:
-    import base64
-    if "," in b64:
-        b64 = b64.split(",", 1)[1]
-    return base64.b64decode(b64)
-
-
-def _clamp_resolution(width_mm: float, height_mm: float, step_mm: float, max_steps: int):
-    cols = max(10, min(max_steps, int(width_mm / step_mm)))
-    rows = max(10, min(max_steps, int(height_mm / step_mm)))
-    return cols, rows
-
-
 @app.post("/api/preview")
 async def preview(req: GenerateRequest):
     p = req.params
-    img_bytes = _decode_image(req.image_data)
+    aspect = p.width_mm / p.height_mm
+    cols, rows = (PREVIEW_RES, max(1, int(PREVIEW_RES / aspect))) if aspect >= 1 \
+                 else (max(1, int(PREVIEW_RES * aspect)), PREVIEW_RES)
 
-    aspect = float(p.get("aspect", 1.0))
-    cols = PREVIEW_RES
-    rows = max(1, int(cols / aspect))
-    if rows > PREVIEW_RES:
-        rows = PREVIEW_RES
-        cols = max(1, int(rows * aspect))
-
-    hm = process_image_to_heightmap(img_bytes, cols, rows)
-
-    # Simulate actual machined surface so the preview matches STL
-    from app.image_processor import apply_tool_geometry
-    width_mm  = float(p.get("width_mm",  100.0))
-    height_mm = float(p.get("height_mm", 100.0))
-    cut_depth = float(p.get("cut_depth", 3.0))
-    x_step = width_mm  / max(cols - 1, 1)
-    y_step = height_mm / max(rows - 1, 1)
-    bit_type     = p.get("bit_type", "vbit")
-    bit_diameter = float(p.get("bit_diameter", 3.175))
-    tip_angle    = float(p.get("tip_angle", 60.0))
-    hm = apply_tool_geometry(hm, bit_type, bit_diameter, tip_angle, cut_depth, x_step, y_step)
-
-    return {
-        "heightmap": hm.flatten().tolist(),
-        "rows": int(hm.shape[0]),
-        "cols": int(hm.shape[1]),
-    }
+    hm = _load_heightmap(req, cols, rows)
+    hm = apply_tool_geometry(hm, p, p.width_mm / max(cols - 1, 1), p.height_mm / max(rows - 1, 1))
+    return {"heightmap": hm.flatten().tolist(), "rows": rows, "cols": cols}
 
 
 @app.post("/api/download/stl")
 async def download_stl(req: GenerateRequest):
     p = req.params
-    img_bytes = _decode_image(req.image_data)
-
-    width_mm = float(p.get("width_mm", 100.0))
-    height_mm = float(p.get("height_mm", 100.0))
-
-    cols = min(STL_RES, max(50, int(width_mm / 0.5)))
-    rows = min(STL_RES, max(50, int(height_mm / 0.5)))
-
-    hm = process_image_to_heightmap(img_bytes, cols, rows)
-    stl_bytes = generate_stl(hm, p)
-
+    cols, rows = _grid(p.width_mm, p.height_mm, STL_STEP_MM, 50, STL_RES)
+    hm = _load_heightmap(req, cols, rows)
     return Response(
-        content=stl_bytes,
+        content=generate_stl(hm, p),
         media_type="application/octet-stream",
         headers={"Content-Disposition": f"attachment; filename=molino_v{app.version}_carve.stl"},
     )
@@ -104,19 +80,10 @@ async def download_stl(req: GenerateRequest):
 @app.post("/api/download/gcode")
 async def download_gcode(req: GenerateRequest):
     p = req.params
-    img_bytes = _decode_image(req.image_data)
-
-    width_mm = float(p.get("width_mm", 100.0))
-    height_mm = float(p.get("height_mm", 100.0))
-    step_over = float(p.get("step_over", 0.25))
-
-    cols, rows = _clamp_resolution(width_mm, height_mm, step_over, GCODE_MAX)
-
-    hm = process_image_to_heightmap(img_bytes, cols, rows)
-    gcode = generate_gcode(hm, p)
-
+    cols, rows = _grid(p.width_mm, p.height_mm, p.step_over, 10, GCODE_MAX)
+    hm = _load_heightmap(req, cols, rows)
     return Response(
-        content=gcode,
+        content=generate_gcode(hm, p),
         media_type="text/plain",
         headers={"Content-Disposition": f"attachment; filename=molino_v{app.version}_carve.gcode"},
     )

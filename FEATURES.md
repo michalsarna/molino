@@ -4,6 +4,23 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.15
+
+- **Full code review & refactor**
+  - Single validated `CarveParams` model replaces ad-hoc `params.get(...)` with scattered, inconsistent defaults; bad input (e.g. cut deeper than stock, unknown bit type) now returns 422 instead of silently defaulting
+  - Malformed / non-image `image_data` returns 400 instead of a 500
+  - Version lives in one place (`app.__version__`) and is read by the API, G-code header and STL header
+  - STL generation vectorised with NumPy — seconds → milliseconds for a 300×300 grid
+  - End-mill dilation rewritten as separable 1D passes (was a 2D sliding window whose memory grew with bit-diameter²)
+  - 3D viewer: fixed leaked `requestAnimationFrame` loop and `resize` listener on every "Generate Preview"
+  - Image adjustments: PNG encoding moved from every slider tick to send-time; slider redraws coalesced per frame
+  - Filenames keep Unicode letters (e.g. `zdjęcie` no longer becomes `zdj_cie`)
+  - Removed unused `python-multipart` dependency, dead code and duplicated parameters
+- **Tests** — `pytest` suite covering G-code quantisation/row-skipping, STL binary layout and normals, tool geometry, params validation and the HTTP API (`pip install -r requirements-dev.txt && pytest`)
+- **Version bumped to 0.15**
+
+---
+
 ## v0.14
 
 - **G-code Z precision** — all depths quantized to 0.01 mm (machine step resolution); Z move emitted only when change ≥ 0.01 mm so programmed path = executed path
