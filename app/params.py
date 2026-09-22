@@ -26,6 +26,13 @@ class CarveParams(BaseModel):
 
     units: Literal["metric", "imperial"] = "metric"
 
+    # Where X0 Y0 sits on the stock ("<row>-<column>"); Z0 is always the stock top
+    origin: Literal[
+        "top-left",    "top-center",    "top-right",
+        "middle-left", "middle-center", "middle-right",
+        "bottom-left", "bottom-center", "bottom-right",
+    ] = "bottom-left"
+
     @model_validator(mode="after")
     def _depth_within_stock(self):
         if self.cut_depth > self.wood_thickness:

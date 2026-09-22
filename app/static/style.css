@@ -333,6 +333,36 @@ fieldset input[readonly] {
 }
 fieldset select { text-align: left; cursor: pointer; }
 
+/* Work-origin 3×3 picker */
+.origin-picker {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.origin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 16px);
+  gap: 3px;
+  padding: 4px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.origin-grid label { display: block; width: 16px; height: 16px; cursor: pointer; }
+.origin-grid input { display: none; }
+.origin-grid span {
+  display: block;
+  width: 100%; height: 100%;
+  border-radius: 3px;
+  background: var(--border);
+  transition: background .15s;
+}
+.origin-grid label:hover span { background: var(--muted); }
+.origin-grid input:checked + span { background: var(--primary); }
+
 /* ── Buttons ─────────────────────────────────────────────────────── */
 .step-actions {
   display: flex;
