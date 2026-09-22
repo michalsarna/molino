@@ -4,6 +4,13 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.18
+
+- **No-cut / max-cut level handles** — the depth bar on the Image step now carries two draggable handles. Gray levels lighter than the left handle become "no cut", darker than the right handle become "max cut", and everything between is remapped linearly. The bar redraws to show the active range and the labels show the thresholds (0–255). Applied client-side after brightness/contrast/invert, so preview, STL and G-code all see the same result
+- **Version bumped to 0.18**
+
+---
+
 ## v0.17
 
 - **Work-origin picker** — 3×3 grid in Machine Parameters selects where X0 Y0 sits on the stock (corners, edge midpoints or centre); single selection, default bottom-left. G-code X/Y are shifted accordingly and the header records the choice. Z0 remains the stock top
