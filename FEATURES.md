@@ -4,6 +4,17 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.22
+
+- **Unreachable-material highlight** — the preview tints the carved surface magenta wherever the target is deeper than the selected tool can reach (graded, full tint at 20 % of the cut depth or 1 mm, whichever is larger); toggle in the viewer, on by default. This is the visible signature of bit diameter / tip angle: a bigger or blunter tool lights up more of the image
+- **Unreachable stat** — export info shows the share of the carve the tool can't fully reach and the largest leftover depth
+- **Path drawn at real raster spacing** — preview rows now follow the step-over (up to 400 rows), so the tool-path overlay shows the actual line density instead of a fixed 200-row grid
+- **Stale preview re-plans automatically** — changing any parameter marks the preview stale; entering step 3 via the step indicator regenerates instead of showing the old result
+- Preview payload values rounded to 4 decimals
+- **Version bumped to 0.22**
+
+---
+
 ## v0.21
 
 - **True tool-offset paths** — the G-code now drives the tool *centre* along the image eroded by the tool profile (min-filter with a flat disc for end mills, a cone for V-bits), so the bit never cuts below the target anywhere under its footprint. A V-bit stays shallow next to a white edge instead of flaring into it; an end mill can't enter features narrower than its diameter and leaves them uncut. Path, run time and file therefore change with bit diameter and tip angle

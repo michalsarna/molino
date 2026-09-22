@@ -222,14 +222,21 @@
 
       <div id="viewer-wrap">
         <div id="viewer"></div>
-        <label class="toggle-label viewer-toggle" title="Planned tool path: red = cutting, blue = link through a finished groove, grey = rapid">
-          Tool path
-          <span class="swatch cut"></span>cut
-          <span class="swatch link"></span>link
-          <span class="swatch hop"></span>rapid
-          <input type="checkbox" id="ctrl-toolpath" />
-          <span class="toggle"></span>
-        </label>
+        <div class="viewer-toggles">
+          <label class="toggle-label viewer-toggle" title="Tint the surface where the target is deeper than this tool can reach">
+            Unreachable material <span class="swatch left"></span>
+            <input type="checkbox" id="ctrl-leftover" checked />
+            <span class="toggle"></span>
+          </label>
+          <label class="toggle-label viewer-toggle" title="Planned tool path: red = cutting, blue = link through a finished groove, grey = rapid">
+            Tool path
+            <span class="swatch cut"></span>cut
+            <span class="swatch link"></span>link
+            <span class="swatch hop"></span>rapid
+            <input type="checkbox" id="ctrl-toolpath" />
+            <span class="toggle"></span>
+          </label>
+        </div>
         <div id="viewer-hint">Drag to rotate · Scroll to zoom · Right-drag to pan</div>
         <div id="loading-overlay" class="hidden">
           <div class="spinner"></div>
