@@ -673,8 +673,19 @@ document.querySelectorAll("#step-2 input, #step-2 select").forEach(el => {
   el.addEventListener("change", () => { state.previewStale = true; });
 });
 
+// e.g. "200x150mm_vbit60deg-3.175mm" — carve size and tool in the active unit system
+function setupTag() {
+  const p = state.params, imperial = state.units === "imperial";
+  const unit = imperial ? "in" : "mm";
+  const num  = mm => String(parseFloat((imperial ? mm / MM_PER_INCH : mm).toFixed(3)));
+  const tool = p.bit_type === "vbit"
+    ? `vbit${p.tip_angle}deg-${num(p.bit_diameter)}${unit}`
+    : `${p.bit_type}-${num(p.bit_diameter)}${unit}`;
+  return `${num(p.width_mm)}x${num(p.height_mm)}${unit}_${tool}`;
+}
+
 btnDlStl.addEventListener("click",   () => downloadFile("/api/download/stl",   `molino_v${state.version}_${state.originalFileName}_carve.stl`));
-btnDlGcode.addEventListener("click", () => downloadFile("/api/download/gcode", `molino_v${state.version}_${state.originalFileName}_carve.gcode`));
+btnDlGcode.addEventListener("click", () => downloadFile("/api/download/gcode", `molino_v${state.version}_${state.originalFileName}_${setupTag()}.gcode`));
 
 // ── Logo click → new session ───────────────────────────────────────────────
 document.querySelector(".logo").addEventListener("click", () => location.reload());
