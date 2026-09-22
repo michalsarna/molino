@@ -1,3 +1,4 @@
+import math
 import re
 import struct
 
@@ -192,7 +193,9 @@ def _plateau(size=40, lo=10, hi=30):
     return hm
 
 
-@pytest.mark.parametrize("tool", [dict(bit_type="vbit", tip_angle=60), dict(bit_type="endmill", bit_diameter=4.0)])
+@pytest.mark.parametrize("tool", [dict(bit_type="vbit", tip_angle=60, bit_diameter=6.0),
+                                  dict(bit_type="endmill", bit_diameter=4.0),
+                                  dict(bit_type="ballnose", bit_diameter=4.0)])
 def test_tool_offset_never_cuts_below_target_but_reaches_depth_in_open_areas(tool):
     hm = _plateau()
     p = params(width_mm=39, height_mm=39, cut_depth=3.0, **tool)
@@ -207,15 +210,35 @@ def test_tool_offset_never_cuts_below_target_but_reaches_depth_in_open_areas(too
     assert path[5, 5] == 0.0                         # untouched background
 
 
-def test_vbit_cannot_cut_a_vertical_wall():
-    # Next to white the V flank limits depth to distance / tan(half angle)
+def test_vbit_flank_limits_depth_only_within_the_cutter_radius():
+    # Next to white the V flank limits depth to distance / tan(half angle) — but only for
+    # neighbours inside the cutter radius; beyond it the shank is above the cut.
     hm = _plateau()
-    p = params(width_mm=39, height_mm=39, cut_depth=3.0, tip_angle=90)   # tan(45°) = 1
+    p = params(width_mm=39, height_mm=39, cut_depth=3.0, tip_angle=90, bit_diameter=5.0)  # tan45=1, R=2.5
     path = tool_path_depths(hm * p.cut_depth, p, 1.0, 1.0)
-    for k in range(1, 4):                           # k px inside the plateau edge (edge is col 10)
-        assert path[20, 9 + k] <= k * 1.0 + 1e-6
-    assert path[20, 9 + 1] == pytest.approx(1.0)
-    assert path[20, 9 + 2] == pytest.approx(2.0)
+    assert path[20, 10] == pytest.approx(1.0)       # 1 mm from white
+    assert path[20, 11] == pytest.approx(2.0)       # 2 mm from white
+    assert path[20, 12] == pytest.approx(3.0)       # 3 mm > R: unconstrained, full depth
+
+
+def test_endmill_footprint_is_a_disc_not_a_square():
+    hm = np.ones((21, 21), dtype=np.float32)
+    hm[10, 10] = 0.0                                # one white pixel in a full-depth field
+    p = params(width_mm=20, height_mm=20, cut_depth=2.0, bit_type="endmill", bit_diameter=4.0)   # R = 2
+    path = tool_path_depths(hm * 2.0, p, 1.0, 1.0)
+    assert path[10, 12] == 0.0                      # (2,0): d = 2.00 <= R  -> blocked
+    assert path[11, 11] == 0.0                      # (1,1): d = 1.41 <= R  -> blocked
+    assert path[11, 12] == pytest.approx(2.0)       # (2,1): d = 2.24 >  R  -> free (a square would block it)
+
+
+def test_ballnose_profile_between_flat_and_v():
+    hm = np.ones((21, 21), dtype=np.float32)
+    hm[10, 10] = 0.0
+    p = params(width_mm=20, height_mm=20, cut_depth=2.0, bit_type="ballnose", bit_diameter=4.0)  # R = 2
+    path = tool_path_depths(hm * 2.0, p, 1.0, 1.0)
+    assert path[10, 11] == pytest.approx(2 - math.sqrt(3))   # k(1) = R - sqrt(R^2 - 1)
+    assert path[10, 12] == pytest.approx(2.0)                # k(2) = R: the ball's edge just touches
+    assert path[10, 13] == pytest.approx(2.0)                # beyond R: unconstrained
 
 
 def test_endmill_skips_features_narrower_than_its_diameter():

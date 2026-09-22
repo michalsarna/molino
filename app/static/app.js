@@ -569,9 +569,9 @@ async function generatePreview() {
       : `${estMins}m`;
     const u             = state.units === "imperial";
     const fmt           = v => u ? (v / MM_PER_INCH).toFixed(3) + " in" : v.toFixed(1) + " mm";
-    const toolLabel     = p.bit_type === "vbit"
-      ? `V-bit ${p.tip_angle}° / ⌀${fmt(p.bit_diameter)}`
-      : `End mill ⌀${fmt(p.bit_diameter)}`;
+    const toolLabel     = { vbit:     `V-bit ${p.tip_angle}° / ⌀${fmt(p.bit_diameter)}`,
+                            endmill:  `End mill ⌀${fmt(p.bit_diameter)}`,
+                            ballnose: `Ball nose ⌀${fmt(p.bit_diameter)}` }[p.bit_type];
 
     exportInfo.innerHTML =
       `Size: <b>${fmt(p.width_mm)} × ${fmt(p.height_mm)}</b> &nbsp;|&nbsp; ` +

@@ -7,56 +7,87 @@ from PIL import Image
 from app.params import CarveParams
 
 
-def _profile_filter(depths: np.ndarray, reach: int, axis: int, ramp_per_px: float, op) -> np.ndarray:
-    """
-    Separable morphological filter along one axis with a linear tool profile.
-    op=np.minimum → erosion:  a source k px away contributes value + k*ramp (tool may not go deeper)
-    op=np.maximum → dilation: a source k px away contributes value - k*ramp (tool flank cuts there)
-    ramp_per_px = 0 gives a flat (end mill) profile.
-    """
-    n = depths.shape[axis]
-    pad = [(0, 0), (0, 0)]
-    pad[axis] = (reach, reach)
-    padded = np.pad(depths, pad, mode="edge")
-    sign = 1.0 if op is np.minimum else -1.0
+# ── Tool profiles ─────────────────────────────────────────────────────────
+# k(d) = height of the cutter surface above its lowest point at horizontal distance d
+# from the axis, defined for d <= cutter radius. Beyond the cutter radius the tool
+# does not exist (the shank is above the cut), so no constraint applies there.
 
+def _profile(p: CarveParams):
+    R = p.bit_diameter / 2
+    if p.bit_type == "endmill":
+        return R, None                                   # flat: k = 0, handled by the fast disc path
+    if p.bit_type == "ballnose":
+        return R, lambda d: R - math.sqrt(max(R * R - d * d, 0.0))
+    tan_half = math.tan(math.radians(p.tip_angle / 2))
+    return R, lambda d: d / tan_half                     # V cone, truncated at the cutter radius
+
+
+# ── Morphology on a regular grid with true Euclidean footprints ──────────
+
+def _running_extreme(a: np.ndarray, w: int, op) -> np.ndarray:
+    """Centred sliding-window min/max of odd width w along axis 0 (van Herk / Gil-Werman, O(N))."""
+    if w <= 1:
+        return a
+    h = w // 2
+    n = a.shape[0]
+    extra = -(n + 2 * h) % w
+    padded = np.pad(a, [(h, h + extra)] + [(0, 0)] * (a.ndim - 1), mode="edge")
+    m = padded.shape[0]
+    blocks = padded.reshape(m // w, w, *padded.shape[1:])
+    prefix = op.accumulate(blocks, axis=1).reshape(m, *padded.shape[1:])
+    suffix = op.accumulate(blocks[:, ::-1], axis=1)[:, ::-1].reshape(m, *padded.shape[1:])
+    return op(suffix[:n], prefix[w - 1:w - 1 + n])
+
+
+def _flat_disc(depths: np.ndarray, R: float, xs: float, ys: float, op) -> np.ndarray:
+    """Exact disc min/max filter: one O(N) column pass per horizontal offset."""
+    rx = int(R / xs)
+    H, W = depths.shape
+    padded = np.pad(depths, ((0, 0), (rx, rx)), mode="edge")
     out = depths.copy()
-    for k in range(-reach, reach + 1):
-        if k == 0:
-            continue
-        sl = [slice(None), slice(None)]
-        sl[axis] = slice(reach + k, reach + k + n)
-        op(out, padded[tuple(sl)] + sign * abs(k) * ramp_per_px, out=out)
+    for dx in range(-rx, rx + 1):
+        half = math.sqrt(max(R * R - (dx * xs) ** 2, 0.0))
+        w = 2 * int(half / ys) + 1
+        op(out, _running_extreme(padded[:, rx + dx:rx + dx + W], w, op), out=out)
     return out
 
 
-def _kernel(p: CarveParams, x_step: float, y_step: float):
-    """(reach_y_px, reach_x_px, ramp_y_mm_per_px, ramp_x_mm_per_px) describing the tool profile."""
-    if p.bit_type == "endmill":
-        r = p.bit_diameter / 2
-        return max(1, round(r / y_step)), max(1, round(r / x_step)), 0.0, 0.0
-    tan_half = math.tan(math.radians(p.tip_angle / 2))
-    reach_mm = p.cut_depth * tan_half
-    return (max(1, math.ceil(reach_mm / y_step)), max(1, math.ceil(reach_mm / x_step)),
-            y_step / tan_half, x_step / tan_half)
+def _shaped(depths: np.ndarray, R: float, k, xs: float, ys: float, op, sign: float) -> np.ndarray:
+    """Min-plus / max-minus filter with a radial profile k(d) over the disc of radius R."""
+    ry, rx = int(R / ys), int(R / xs)
+    H, W = depths.shape
+    padded = np.pad(depths, ((ry, ry), (rx, rx)), mode="edge")
+    out = depths.copy()
+    for dy in range(-ry, ry + 1):
+        for dx in range(-rx, rx + 1):
+            if dy == 0 and dx == 0:
+                continue
+            d = math.hypot(dx * xs, dy * ys)
+            if d > R:
+                continue
+            op(out, padded[ry + dy:ry + dy + H, rx + dx:rx + dx + W] + sign * k(d), out=out)
+    return out
+
+
+def _filter(depths, p, xs, ys, op, sign):
+    R, k = _profile(p)
+    if k is None:
+        return _flat_disc(depths, R, xs, ys, op)
+    return _shaped(depths, R, k, xs, ys, op, sign)
 
 
 def tool_path_depths(target_mm: np.ndarray, p: CarveParams, x_step: float, y_step: float) -> np.ndarray:
     """
     Tool-centre depth (mm) at every pixel: the deepest the tool may go without cutting below
-    the target anywhere under its footprint. Erosion of the target by the tool profile — this
-    is what the G-code drives, and why narrow or steep features keep material with a big tool.
+    the target anywhere under its footprint (erosion by the tool profile). This is what the
+    G-code drives, and why narrow or steep features keep material with a big or blunt tool.
     """
-    ry, rx, my, mx = _kernel(p, x_step, y_step)
-    out = _profile_filter(target_mm, ry, 0, my, np.minimum)
-    return _profile_filter(out, rx, 1, mx, np.minimum)
+    return _filter(target_mm, p, x_step, y_step, np.minimum, +1.0)
 
 
 def machined_surface(path_mm: np.ndarray, p: CarveParams, x_step: float, y_step: float) -> np.ndarray:
-    """Depth (mm) the tool actually leaves when its centre follows path_mm: dilation by the tool profile."""
-    ry, rx, my, mx = _kernel(p, x_step, y_step)
-    out = _profile_filter(path_mm, ry, 0, my, np.maximum)
-    return _profile_filter(out, rx, 1, mx, np.maximum)
+    """Depth (mm) the tool actually leaves when its centre follows path_mm (dilation by the tool profile)."""
+    return _filter(path_mm, p, x_step, y_step, np.maximum, -1.0)
 
 
 def apply_tool_geometry(heightmap: np.ndarray, p: CarveParams, x_step: float, y_step: float) -> np.ndarray:

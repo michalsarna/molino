@@ -3,8 +3,8 @@ services:
     build:
       context: .
       args:
-        BUILD_VERSION: "0.22"
-    image: molino:0.22
+        BUILD_VERSION: "0.23"
+    image: molino:0.23
     ports:
       - "8000:8000"
     restart: unless-stopped
