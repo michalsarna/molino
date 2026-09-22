@@ -60,9 +60,14 @@ async def preview(req: GenerateRequest):
     cols, rows = (PREVIEW_RES, max(1, int(PREVIEW_RES / aspect))) if aspect >= 1 \
                  else (max(1, int(PREVIEW_RES * aspect)), PREVIEW_RES)
 
-    hm = _load_heightmap(req, cols, rows)
-    hm = apply_tool_geometry(hm, p, p.width_mm / max(cols - 1, 1), p.height_mm / max(rows - 1, 1))
-    return {"heightmap": hm.flatten().tolist(), "rows": rows, "cols": cols}
+    raw = _load_heightmap(req, cols, rows)
+    hm  = apply_tool_geometry(raw, p, p.width_mm / max(cols - 1, 1), p.height_mm / max(rows - 1, 1))
+    return {
+        "heightmap":     hm.flatten().tolist(),    # simulated machined surface
+        "raw_heightmap": raw.flatten().tolist(),   # programmed tip depth (what G-code follows)
+        "rows": rows,
+        "cols": cols,
+    }
 
 
 @app.post("/api/download/stl")
