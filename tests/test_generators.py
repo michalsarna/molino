@@ -121,6 +121,31 @@ def test_planner_skims_small_white_specks_but_retracts_over_long_gaps():
     assert 60 <= hops[1][1] <= 79
 
 
+def test_planner_follows_strokes_instead_of_rastering_rows():
+    # Two thin diagonal strokes ~35 mm apart: the tool should trace each stroke end to end
+    # (rolling row to row over a 1 px white skim) and hop only once per stroke.
+    hm = np.zeros((20, 60), dtype=np.float32)
+    for r in range(20):
+        hm[r, 5 + r] = 1.0
+        hm[r, 40 + r] = 1.0
+    p = params(width_mm=59, height_mm=19, cut_depth=1.0, depth_per_pass=1.0)
+    plan = plan_toolpath(quantise(hm, 1.0), p, 1.0, 1.0)
+    assert sum(op[0] == "hop" for op in plan.ops) == 2
+
+
+def test_later_passes_link_through_finished_grooves_at_rapid_rate():
+    # Deep ends, shallow middle: pass 2 must stay down and link across the finished middle
+    row = np.concatenate([np.ones(10), np.full(20, 0.3), np.ones(10)]).astype(np.float32)
+    hm = np.tile(row, (2, 1))
+    p = params(width_mm=39, height_mm=1, cut_depth=2.0, depth_per_pass=1.0)
+    plan = plan_toolpath(quantise(hm, 2.0), p, 1.0, 1.0)
+    i2 = [i for i, op in enumerate(plan.ops) if op[0] == "pass"][1]
+    assert sum(op[0] == "hop" for op in plan.ops[i2:]) == 1
+    assert plan.link_mm > 0
+    pass2 = generate_gcode(hm, p).split("Pass 2/2")[1]
+    assert " F3000.0000" in pass2 and " F1000.0000" in pass2
+
+
 def test_gcode_flat_runs_collapse_to_single_moves():
     hm = np.full((3, 50), 0.5, dtype=np.float32)
     code = generate_gcode(hm, params(width_mm=49, height_mm=2, cut_depth=2.0, depth_per_pass=2.0))

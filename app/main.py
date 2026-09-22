@@ -13,7 +13,7 @@ from app.gcode_generator import generate_gcode
 from app.image_processor import apply_tool_geometry, process_image_to_heightmap
 from app.params import CarveParams
 from app.stl_generator import generate_stl
-from app.toolpath import plan_toolpath, quantise
+from app.toolpath import plan_toolpath, preview_paths, quantise
 
 app = FastAPI(title="Molino", version=__version__)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -78,6 +78,7 @@ async def preview(req: GenerateRequest):
         "raster_lines": real_rows,
         "passes": plan.passes,
         "estimate_min": estimate_min,
+        "toolpath": preview_paths(plan),           # planned path at preview resolution
     }
 
 
