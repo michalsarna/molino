@@ -9,3 +9,6 @@ __pycache__/
 .env
 .pytest_cache/
 private/
+*.swp
+tests/
+requirements-dev.txt

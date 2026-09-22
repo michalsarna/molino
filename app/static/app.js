@@ -9,7 +9,6 @@ const state = {
   originalPixels: null,
   origWidth: 0,
   origHeight: 0,
-  processedDataURL: null,
   params: {},
   units: "metric",   // "metric" | "imperial"
   version: "0.00",
@@ -48,13 +47,7 @@ const exportInfo     = document.getElementById("export-info");
 
 // ── Step navigation ───────────────────────────────────────────────────────
 function showStep(n) {
-  document.querySelectorAll(".step").forEach(s => {
-    s.classList.remove("active");
-    s.classList.add("hidden");
-  });
-  const target = document.getElementById(`step-${n}`);
-  target.classList.remove("hidden");
-  target.classList.add("active");
+  document.querySelectorAll(".step").forEach(s => s.classList.toggle("active", s.id === `step-${n}`));
   document.querySelectorAll(".step-indicator").forEach(el => {
     const sn = parseInt(el.dataset.step);
     el.classList.toggle("active", sn === n);
@@ -64,7 +57,7 @@ function showStep(n) {
 
 // ── Image loading ─────────────────────────────────────────────────────────
 function loadImage(file) {
-  state.originalFileName = file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "_");
+  state.originalFileName = file.name.replace(/\.[^.]+$/, "").replace(/[^\p{L}\p{N}_-]/gu, "_");
   const reader = new FileReader();
   reader.onload = e => {
     const img = new Image();
@@ -85,6 +78,7 @@ function loadImage(file) {
       updatePreview();
       btnNext1.disabled = false;
       updateHeightParam();
+      state.previewGenerated = false;
     };
     img.src = e.target.result;
   };
@@ -93,6 +87,13 @@ function loadImage(file) {
 
 // ── Image adjustments (client-side) ───────────────────────────────────────
 function clamp(v) { return v < 0 ? 0 : v > 255 ? 255 : v; }
+
+// Coalesce rapid slider events into one redraw per frame
+let previewRaf = 0;
+function schedulePreview() {
+  if (previewRaf) return;
+  previewRaf = requestAnimationFrame(() => { previewRaf = 0; updatePreview(); });
+}
 
 function updatePreview() {
   if (!state.originalPixels) return;
@@ -129,7 +130,6 @@ function updatePreview() {
   }
 
   ctx.putImageData(out, 0, 0);
-  state.processedDataURL = previewCanvas.toDataURL("image/png");
 }
 
 // ── Unit system ───────────────────────────────────────────────────────────
@@ -138,11 +138,11 @@ const UNIT_LABELS = {
   imperial: { length: "(in)",     rate: "(in/min)" },
 };
 
-function toDisplay(mm, unitType) {
+function toDisplay(mm) {
   return state.units === "imperial" ? mm / MM_PER_INCH : mm;
 }
 
-function toMM(displayVal, unitType) {
+function toMM(displayVal) {
   return state.units === "imperial" ? displayVal * MM_PER_INCH : displayVal;
 }
 
@@ -170,7 +170,7 @@ function switchUnits(newUnits) {
     if (el.readOnly) return;
     const mm = parseFloat(el.dataset.mm ?? el.value);
     if (!isNaN(mm)) {
-      el.value = formatDisplay(toDisplay(mm, el.dataset.unit), el.dataset.unit);
+      el.value = formatDisplay(toDisplay(mm), el.dataset.unit);
     }
   });
 
@@ -182,7 +182,7 @@ function switchUnits(newUnits) {
 function syncMM(el) {
   const display = parseFloat(el.value);
   if (!isNaN(display)) {
-    el.dataset.mm = toMM(display, el.dataset.unit);
+    el.dataset.mm = toMM(display);
   }
 }
 
@@ -193,7 +193,7 @@ function updateHeightParam() {
   const widthMM = parseFloat(pWidth.dataset.mm ?? pWidth.value);
   const heightMM = widthMM * aspect;
   pHeight.dataset.mm = heightMM;
-  pHeight.value = formatDisplay(toDisplay(heightMM, "length"), "length");
+  pHeight.value = formatDisplay(toDisplay(heightMM), "length");
 }
 
 // ── Collect params (always in mm for the server) ──────────────────────────
@@ -203,7 +203,6 @@ function collectParams() {
   return {
     width_mm:       mm("p-width"),
     height_mm:      parseFloat(pHeight.dataset.mm ?? pHeight.value),
-    aspect:         mm("p-width") / (parseFloat(pHeight.dataset.mm ?? pHeight.value) || 1),
     bit_type:       pBitType.value,
     bit_diameter:   mm("p-bit-dia"),
     tip_angle:      parseFloat(document.getElementById("p-tip-angle").value),
@@ -220,11 +219,25 @@ function collectParams() {
 }
 
 // ── 3D Viewer ─────────────────────────────────────────────────────────────
-let renderer, scene, camera, controls, woodGroup;
+let renderer, scene, camera, controls, woodGroup, viewerRaf = 0;
+
+window.addEventListener("resize", () => {
+  if (!renderer) return;
+  const container = document.getElementById("viewer");
+  const nw = container.clientWidth, nh = container.clientHeight;
+  if (!nw || !nh) return;
+  camera.aspect = nw / nh; camera.updateProjectionMatrix();
+  renderer.setSize(nw, nh);
+});
 
 function initViewer() {
   const container = document.getElementById("viewer");
-  if (renderer) { renderer.dispose(); container.innerHTML = ""; }
+  if (renderer) {
+    cancelAnimationFrame(viewerRaf);
+    controls.dispose();
+    renderer.dispose();
+    container.innerHTML = "";
+  }
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x181a1d);
@@ -253,15 +266,12 @@ function initViewer() {
   fill.position.set(-100, 60, -80);
   scene.add(fill);
 
-  const animate = () => { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); };
+  const animate = () => {
+    viewerRaf = requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  };
   animate();
-
-  window.addEventListener("resize", () => {
-    const nw = container.clientWidth, nh = container.clientHeight;
-    if (!nw || !nh) return;
-    camera.aspect = nw / nh; camera.updateProjectionMatrix();
-    renderer.setSize(nw, nh);
-  });
 }
 
 function buildWoodMesh(heightmap, rows, cols, params) {
@@ -412,7 +422,7 @@ async function apiPost(endpoint, params) {
   const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ image_data: state.processedDataURL, params }),
+    body: JSON.stringify({ image_data: previewCanvas.toDataURL("image/png"), params }),
   });
   if (!res.ok) {
     const text = await res.text();
@@ -425,9 +435,10 @@ async function generatePreview() {
   const p = collectParams();
   state.params = p;
   loadingOverlay.classList.remove("hidden");
+  btnGenerate.disabled = true;
 
   try {
-    const res  = await apiPost("/api/preview", { ...p, aspect: p.width_mm / p.height_mm });
+    const res  = await apiPost("/api/preview", p);
     const data = await res.json();
 
     initViewer();
@@ -463,6 +474,7 @@ async function generatePreview() {
     alert("Error generating preview:\n" + err.message);
   } finally {
     loadingOverlay.classList.add("hidden");
+    btnGenerate.disabled = false;
   }
 }
 
@@ -495,17 +507,15 @@ dropZone.addEventListener("drop", e => {
 });
 fileInput.addEventListener("change", () => { if (fileInput.files[0]) loadImage(fileInput.files[0]); });
 
-ctrlBrightness.addEventListener("input",  updatePreview);
-ctrlContrast.addEventListener("input",   updatePreview);
-ctrlInvert.addEventListener("change",    updatePreview);
-ctrlFlipH.addEventListener("change",     updatePreview);
-ctrlFlipV.addEventListener("change",     updatePreview);
+ctrlBrightness.addEventListener("input",  schedulePreview);
+ctrlContrast.addEventListener("input",   schedulePreview);
+ctrlInvert.addEventListener("change",    schedulePreview);
+ctrlFlipH.addEventListener("change",     schedulePreview);
+ctrlFlipV.addEventListener("change",     schedulePreview);
 
-pWidth.addEventListener("input", () => { syncMM(pWidth); updateHeightParam(); });
-
-// Sync data-mm on all editable unit-aware inputs
+// Keep data-mm in sync on all editable unit-aware inputs; width also drives height
 document.querySelectorAll("input[data-unit]:not([readonly])").forEach(el => {
-  el.addEventListener("input", () => syncMM(el));
+  el.addEventListener("input", () => { syncMM(el); if (el === pWidth) updateHeightParam(); });
 });
 
 // Unit radio buttons
@@ -538,7 +548,7 @@ document.querySelectorAll(".step-indicator").forEach(el => {
   el.addEventListener("click", () => {
     const n = parseInt(el.dataset.step);
     if (n === 1) { showStep(1); return; }
-    if (n === 2 && state.processedDataURL) { showStep(2); return; }
+    if (n === 2 && state.originalPixels)   { showStep(2); return; }
     if (n === 3 && state.previewGenerated) { showStep(3); return; }
   });
 });

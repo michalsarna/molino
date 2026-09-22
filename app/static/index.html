@@ -18,7 +18,7 @@
 <body>
   <header>
     <div class="logo">&#9658; molino</div>
-    <div class="version">v0.14</div>
+    <div class="version"></div>
   </header>
 
   <nav class="steps-nav">
@@ -95,7 +95,7 @@
   </section>
 
   <!-- ── STEP 2: Parameters ──────────────────────────────────────── -->
-  <section id="step-2" class="step hidden">
+  <section id="step-2" class="step">
     <div class="step-inner">
       <h2>Machining Parameters</h2>
 
@@ -154,7 +154,7 @@
           </label>
           <label>
             Depth per pass <span class="unit-label">(mm)</span>
-            <input type="number" id="p-depth-per-pass" value="1" min="0.001" step="any" data-unit="length" data-mm="1" />
+            <input type="number" id="p-depth-per-pass" value="1" min="0.01" step="any" data-unit="length" data-mm="1" />
           </label>
         </fieldset>
 
@@ -188,7 +188,7 @@
   </section>
 
   <!-- ── STEP 3: 3D Preview & Export ────────────────────────────── -->
-  <section id="step-3" class="step hidden">
+  <section id="step-3" class="step">
     <div class="step-inner wide">
       <h2>3D Preview &amp; Export</h2>
 
