@@ -9,6 +9,7 @@ from app.gcode_generator import Z_STEP, generate_gcode
 from app.image_processor import apply_tool_geometry
 from app.params import CarveParams
 from app.stl_generator import generate_stl
+from app.toolpath import plan_toolpath, quantise
 
 
 def params(**kw):
@@ -67,6 +68,64 @@ def test_gcode_work_origin_shifts_xy():
     tr = generate_gcode(hm, params(width_mm=10, height_mm=20, origin="top-right"))
     assert (min(xs(tr)), max(xs(tr)), min(ys(tr)), max(ys(tr))) == (-10, 0, -20, 0)
     assert "Work origin:    X0 Y0 at stock top-right" in tr
+
+
+# ── Tool-path planner ─────────────────────────────────────────────────────
+
+def _cut_points(plan):
+    return np.concatenate([op[1] for op in plan.ops if op[0] == "cut"])
+
+
+def test_planner_never_travels_over_wide_uncut_areas():
+    # Dark rectangle in columns 20..29 of a 60-column white field; 1 mm pixels
+    hm = np.zeros((10, 60), dtype=np.float32)
+    hm[:, 20:30] = 1.0
+    p = params(width_mm=59, height_mm=9, cut_depth=2.0, depth_per_pass=2.0)
+    plan = plan_toolpath(quantise(hm, p.cut_depth), p, 1.0, 1.0)
+    pts = _cut_points(plan)
+    assert pts[:, 0].min() >= 20 - 1e-6 and pts[:, 0].max() <= 29 + 1e-6
+    assert np.all(pts[:, 2] <= -2.0 + 1e-9)                    # only ever cutting at full depth
+    assert sum(op[0] == "hop" for op in plan.ops) == 1          # one plunge, then rolls row to row
+
+
+def test_planner_finishes_one_island_before_the_next():
+    hm = np.zeros((8, 100), dtype=np.float32)
+    hm[:, 5:15] = 1.0      # island A
+    hm[:, 85:95] = 1.0     # island B, 70 mm away -> far beyond any bridging threshold
+    p = params(width_mm=99, height_mm=7, cut_depth=1.0, depth_per_pass=1.0)
+    plan = plan_toolpath(quantise(hm, p.cut_depth), p, 1.0, 1.0)
+    in_b = _cut_points(plan)[:, 0] > 50
+    assert np.count_nonzero(in_b[1:] != in_b[:-1]) == 1
+
+    # Even a 4 mm white gap (wider than the 2 mm skim limit) must not make the tool
+    # alternate between the two shapes row by row
+    hm2 = np.zeros((8, 40), dtype=np.float32)
+    hm2[:, 5:15] = 1.0
+    hm2[:, 19:29] = 1.0
+    p2 = params(width_mm=39, height_mm=7, cut_depth=1.0, depth_per_pass=1.0)
+    plan2 = plan_toolpath(quantise(hm2, p2.cut_depth), p2, 1.0, 1.0)
+    in_b2 = _cut_points(plan2)[:, 0] > 17
+    assert np.count_nonzero(in_b2[1:] != in_b2[:-1]) == 1
+    assert sum(op[0] == "hop" for op in plan2.ops) == 2
+
+
+def test_planner_skims_small_white_specks_but_retracts_over_long_gaps():
+    row = np.ones(80, dtype=np.float32)
+    row[10] = 0.0          # 1 mm speck  -> skim across
+    row[40:60] = 0.0       # 20 mm gap   -> retract
+    hm = np.tile(row, (1, 1))
+    p = params(width_mm=79, height_mm=1, cut_depth=1.0, depth_per_pass=1.0)
+    plan = plan_toolpath(quantise(hm, p.cut_depth), p, 1.0, 1.0)
+    hops = [op for op in plan.ops if op[0] == "hop"]
+    assert len(hops) == 2
+    assert 60 <= hops[1][1] <= 79
+
+
+def test_gcode_flat_runs_collapse_to_single_moves():
+    hm = np.full((3, 50), 0.5, dtype=np.float32)
+    code = generate_gcode(hm, params(width_mm=49, height_mm=2, cut_depth=2.0, depth_per_pass=2.0))
+    assert len([l for l in code.splitlines() if l.startswith("G1 X")]) <= 3 * 2 + 3
+    assert "Est. run time:" in code
 
 
 # ── STL ───────────────────────────────────────────────────────────────────

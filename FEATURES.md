@@ -4,6 +4,20 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.19
+
+- **Tool-path planner** (`app/toolpath.py`) replaces full-width raster rows:
+  - Each pass visits only pixels that still have material to remove; white areas and already-finished regions are no longer traversed
+  - Runs on a row are merged across small gaps when skimming is cheaper than retract → rapid → plunge (cost model from feed, rapid and plunge rates and retract height); never-cut gaps are skimmed at Z0 only if ≤ 2 mm, otherwise the tool retracts
+  - Runs on adjacent rows are grouped into islands; each island is carved with its own serpentine before moving to the nearest remaining island
+  - Rows inside an island are chained without retracting whenever the end column meets the next segment
+  - Flat runs at constant Z collapse to a single `G1` — much smaller files
+- **New machine parameters** — Rapid rate (default 3000 mm/min) and Retract height (default 1 mm, used for hops inside the carve; Safe height is used at start/end only)
+- **Accurate run-time estimate** — G-code header lists estimated time with cut / rapid / plunge distances; the preview's estimate now comes from the planner instead of a rough formula
+- **Version bumped to 0.19**
+
+---
+
 ## v0.18
 
 - **No-cut / max-cut level handles** — the depth bar on the Image step now carries two draggable handles. Gray levels lighter than the left handle become "no cut", darker than the right handle become "max cut", and everything between is remapped linearly. The bar redraws to show the active range and the labels show the thresholds (0–255). Applied client-side after brightness/contrast/invert, so preview, STL and G-code all see the same result
