@@ -33,9 +33,9 @@ def test_preview_returns_grid_matching_aspect(png_b64):
                                           "params": {"width_mm": 200, "height_mm": 100}})
     assert r.status_code == 200
     body = r.json()
-    assert body["cols"] == 200 and body["rows"] == 400          # 100 mm / 0.25 mm step-over
+    assert body["cols"] == 400 and body["rows"] == 400          # 200x100 mm / 0.25 mm, capped at 400
     assert body["raster_lines"] == 400
-    n = 200 * 400
+    n = 400 * 400
     assert len(body["heightmap"]) == len(body["path_heightmap"]) == len(body["leftover"]) == n
     assert 0 <= body["unreachable_pct"] <= 100 and body["leftover_max_mm"] >= 0
     assert body["estimate_min"] > 0 and body["passes"] >= 1 and body["raster_lines"] >= 10

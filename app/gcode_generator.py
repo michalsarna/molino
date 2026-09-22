@@ -36,9 +36,10 @@ def generate_gcode(heightmap: np.ndarray, p: CarveParams) -> str:
         dist, dunit = (lambda mm: f"{mm / 1000:.1f}"), "m"
 
     dpp = p.depth_per_pass if p.depth_per_pass < p.cut_depth else p.cut_depth
-    tool = (f"V-bit {p.tip_angle:g}° included angle, {_fmt(p.bit_diameter * f)} {unit} diameter"
-            if p.bit_type == "vbit" else
-            f"End mill {_fmt(p.bit_diameter * f)} {unit} diameter")
+    dia  = f"{_fmt(p.bit_diameter * f)} {unit} diameter"
+    tool = {"vbit":     f"V-bit {p.tip_angle:g}° included angle, {dia}",
+            "endmill":  f"End mill (flat) {dia}",
+            "ballnose": f"Ball nose {dia}"}[p.bit_type]
     minutes = plan.minutes(p) + SPINDLE_WARMUP_S / 60
 
     lines = [

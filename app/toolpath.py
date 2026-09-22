@@ -287,7 +287,7 @@ def preview_paths(plan: Plan) -> dict:
         elif op[0] == "hop":
             _, x, y, _z = op
             if px is not None:
-                hops.append([px, py, x, y])
+                hops.append([round(px, 3), round(py, 3), round(x, 3), round(y, 3)])
             px, py = x, y
         else:
             pts, link = op[1], op[2]
@@ -299,7 +299,7 @@ def preview_paths(plan: Plan) -> dict:
                 seg = pts[start:end + 1, :2]
                 keep = np.concatenate(([True], seg[1:, 1] != seg[:-1, 1]))
                 keep[-1] = True
-                verts = [pmax, px, py] + seg[keep].ravel().tolist()
+                verts = [pmax, px, py] + np.round(seg[keep], 3).ravel().tolist()
                 (links if link[start] else cuts).append(verts)
                 px, py = float(seg[-1, 0]), float(seg[-1, 1])
                 start = end + 1

@@ -4,6 +4,16 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.23
+
+- **Accurate tool footprints** — tool-offset and simulation now use true Euclidean profiles instead of separable square/Manhattan approximations. An end mill is a disc (the square version blocked the tool 41 % too far from diagonal and curved edges); a V-bit is a cone **truncated at the cutter radius** (the old infinite cone let a 3.175 mm bit be constrained by neighbours 5.8 mm away). Both shrink the unreachable bands along shape edges — this, not path direction, is what limits how close a given tool gets to a side
+- **Ball-nose tool** — new bit type with a spherical profile; reaches into relief detail a flat end mill can't while leaving a smoother surface than a V-bit
+- **Preview grid matches G-code** — up to 400×400 following the step-over, so small tools aren't rounded up to oversized footprints in the preview
+- Flat-disc filters run in O(N) per offset (van Herk running min/max), so large tools on large carves stay fast
+- **Version bumped to 0.23**
+
+---
+
 ## v0.22
 
 - **Unreachable-material highlight** — the preview tints the carved surface magenta wherever the target is deeper than the selected tool can reach (graded, full tint at 20 % of the cut depth or 1 mm, whichever is larger); toggle in the viewer, on by default. This is the visible signature of bit diameter / tip angle: a bigger or blunter tool lights up more of the image

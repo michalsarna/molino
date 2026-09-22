@@ -18,8 +18,7 @@ from app.toolpath import plan_toolpath, preview_paths, quantise
 app = FastAPI(title="Molino", version=__version__)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-PREVIEW_RES      = 200   # preview grid columns
-PREVIEW_MAX_ROWS = 400   # preview rows follow the real raster spacing up to this many
+PREVIEW_MAX  = 400    # preview grid follows the real raster spacing up to this many cols/rows
 STL_RES      = 300    # max grid size for STL export
 STL_STEP_MM  = 0.5    # target STL grid spacing
 GCODE_MAX    = 2000   # max grid size for G-code
@@ -58,9 +57,9 @@ async def index():
 @app.post("/api/preview")
 async def preview(req: GenerateRequest):
     p = req.params
-    # Rows follow the real raster spacing (capped) so the drawn path has the right line density
-    real_rows = _grid(p.width_mm, p.height_mm, p.step_over, 10, GCODE_MAX)[1]
-    cols, rows = PREVIEW_RES, min(PREVIEW_MAX_ROWS, real_rows)
+    # Grid follows the real raster spacing (capped) so tool footprints and line density match the G-code
+    real_cols, real_rows = _grid(p.width_mm, p.height_mm, p.step_over, 10, GCODE_MAX)
+    cols, rows = min(PREVIEW_MAX, real_cols), min(PREVIEW_MAX, real_rows)
 
     raw = _load_heightmap(req, cols, rows)
     x_step, y_step = p.width_mm / max(cols - 1, 1), p.height_mm / max(rows - 1, 1)
@@ -75,7 +74,7 @@ async def preview(req: GenerateRequest):
     estimate_min = plan.minutes(p) * real_rows / rows + 2 / 60
 
     def norm(a):
-        return np.round(a / p.cut_depth, 4).flatten().tolist()
+        return np.round(a / p.cut_depth, 3).flatten().tolist()   # 0.001 of cut depth ≈ Z_STEP
 
     return {
         "heightmap":       norm(sim),

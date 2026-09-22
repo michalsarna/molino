@@ -15,7 +15,7 @@ class CarveParams(BaseModel):
     step_over:      float = Field(0.25, gt=0)
     depth_per_pass: float = Field(1.0, gt=0)
 
-    bit_type:     Literal["vbit", "endmill"] = "vbit"
+    bit_type:     Literal["vbit", "endmill", "ballnose"] = "vbit"
     bit_diameter: float = Field(3.175, gt=0)
     tip_angle:    float = Field(60.0, gt=0, lt=180)
 
