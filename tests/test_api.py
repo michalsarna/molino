@@ -47,6 +47,19 @@ def test_preview_returns_grid_matching_aspect(png_b64):
     assert all(h >= r - 1e-6 for h, r in zip(body["heightmap"], body["path_heightmap"]))
 
 
+def test_auto_step_over_changes_the_plan_with_tool_angle(png_b64):
+    def plan(angle):
+        r = client.post("/api/preview", json={"image_data": png_b64, "params": {
+            "width_mm": 50, "height_mm": 25, "step_over_mode": "auto", "max_ridge": 0.1, "tip_angle": angle}})
+        assert r.status_code == 200
+        b = r.json()
+        return b["raster_lines"], b["step_over_mm"], b["ridge_mm"]
+    lines60, step60, ridge60 = plan(60)
+    lines45, step45, ridge45 = plan(45)
+    assert lines45 > lines60 and step45 < step60
+    assert ridge60 == pytest.approx(0.1, abs=1e-6) and ridge45 == pytest.approx(0.1, abs=1e-6)
+
+
 def test_invalid_image_is_a_400():
     r = client.post("/api/preview", json={"image_data": "data:image/png;base64,!!!notbase64"})
     assert r.status_code == 400

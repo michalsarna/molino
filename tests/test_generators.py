@@ -249,6 +249,26 @@ def test_endmill_skips_features_narrower_than_its_diameter():
     assert tool_path_depths(wide * 2.0, p, 1.0, 1.0)[5, 20] == pytest.approx(2.0)
 
 
+def test_auto_step_over_follows_the_tool_profile():
+    from app.finish import auto_step_over, ridge_height
+    p60 = params(step_over_mode="auto", max_ridge=0.1, tip_angle=60)
+    p45 = params(step_over_mode="auto", max_ridge=0.1, tip_angle=45)
+    s60, s45 = auto_step_over(p60), auto_step_over(p45)
+    assert s60 == pytest.approx(2 * 0.1 * math.tan(math.radians(30)))
+    assert s45 < s60                                           # sharper V -> taller ridge -> tighter spacing
+    assert ridge_height(p60, s60) == pytest.approx(0.1)
+    ball = params(bit_type="ballnose", bit_diameter=6.0, step_over_mode="auto", max_ridge=0.1)
+    assert ridge_height(ball, auto_step_over(ball)) == pytest.approx(0.1)
+    assert auto_step_over(ball) > 5 * s60                      # a ball nose steps far wider for the same finish
+
+
+def test_gcode_header_reports_ridge_for_manual_spacing():
+    hm = np.full((3, 3), 0.5, dtype=np.float32)
+    code = generate_gcode(hm, params(width_mm=10, height_mm=1))   # rows 0.5 mm apart, 60 deg V
+    assert "Ridge height:   0.4330 mm" in code                     # (0.5/2) / tan(30 deg)
+    assert "— manual" in code
+
+
 def test_gcode_changes_with_tool_size():
     hm = np.zeros((6, 40), dtype=np.float32)
     hm[:, 14:26] = 1.0

@@ -156,8 +156,19 @@
             <input type="number" id="p-wood-thick" value="18.0" min="0.001" step="any" data-unit="length" data-mm="18.0" />
           </label>
           <label>
-            Step over <span class="unit-label">(mm)</span>
+            Step over
+            <select id="p-step-mode">
+              <option value="manual">Manual spacing</option>
+              <option value="auto">Auto from finish</option>
+            </select>
+          </label>
+          <label title="Distance between raster lines. In auto mode it is derived from the tool profile and max ridge">
+            Spacing <span class="unit-label">(mm)</span>
             <input type="number" id="p-step-over" value="0.25" min="0.001" step="any" data-unit="length" data-mm="0.25" />
+          </label>
+          <label id="row-max-ridge" style="display:none" title="Largest ridge (scallop) allowed between adjacent passes">
+            Max ridge <span class="unit-label">(mm)</span>
+            <input type="number" id="p-max-ridge" value="0.1" min="0.001" step="any" data-unit="length" data-mm="0.1" />
           </label>
           <label>
             Depth per pass <span class="unit-label">(mm)</span>
