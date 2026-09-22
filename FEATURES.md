@@ -4,6 +4,16 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.20
+
+- **Stroke-following planner** — the pass is now a walk over segments rather than a row raster. From the end of a segment the tool rolls into the overlapping segment on the row above or below and keeps going (this traces strokes in line art and serpentines solid areas); only when nothing is reachable does it retract and hop to the nearest unvisited segment. Line drawings no longer get hopped across on every row
+- **Link moves** — travel over pixels finished in an earlier pass runs along the existing groove at rapid rate (`G1 F<rapid>`) instead of cutting feed; staying down is therefore always cheaper than retract → rapid → plunge, and rows are split only at never-cut white stretches longer than 2 mm
+- **Preview shows the real plan** — the tool-path overlay is now built from the planner output: red = cutting, blue = link through a finished groove, grey = rapid hop. Previously it drew every raw row regardless of the path
+- G-code header lists link distance separately in the run-time estimate
+- **Version bumped to 0.20**
+
+---
+
 ## v0.19
 
 - **Tool-path planner** (`app/toolpath.py`) replaces full-width raster rows:

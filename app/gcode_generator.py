@@ -50,14 +50,14 @@ def generate_gcode(heightmap: np.ndarray, p: CarveParams) -> str:
         f"; Spindle:        {p.spindle_speed} RPM",
         f"; Feed rate:      {_fmt(p.feed_rate * f)} {unit}/min",
         f"; Plunge rate:    {_fmt(p.plunge_rate * f)} {unit}/min",
-        f"; Rapid rate:     {_fmt(p.rapid_rate * f)} {unit}/min",
+        f"; Rapid rate:     {_fmt(p.rapid_rate * f)} {unit}/min (also used for link moves through finished grooves)",
         f"; Retract height: {_fmt(p.retract_height * f)} {unit} (inside carve), "
         f"safe height {_fmt(p.safe_height * f)} {unit} (start/end)",
         f"; Tool:           {tool}",
         f"; Work origin:    X0 Y0 at stock {p.origin}, Z0 at stock top",
         f"; Est. run time:  {_hm(minutes)}  "
-        f"(cut {dist(plan.cut_mm)} {dunit}, rapid {dist(plan.rapid_mm)} {dunit}, "
-        f"plunge {dist(plan.plunge_mm)} {dunit})",
+        f"(cut {dist(plan.cut_mm)} {dunit}, link {dist(plan.link_mm)} {dunit}, "
+        f"rapid {dist(plan.rapid_mm)} {dunit}, plunge {dist(plan.plunge_mm)} {dunit})",
         "; ============================================================",
         "",
         f"{unit_cmd}        ; {unit} units",
@@ -73,10 +73,10 @@ def generate_gcode(heightmap: np.ndarray, p: CarveParams) -> str:
 
     plunge_f = f" F{_fmt(p.plunge_rate * f)}"
     feed_f   = f" F{_fmt(p.feed_rate * f)}"
+    link_f   = f" F{_fmt(p.rapid_rate * f)}"
     retract  = _fmt(p.retract_height * f)
 
-    cur_y, cur_z = None, p.safe_height
-    need_feed = False
+    cur_y, cur_z, cur_f = None, p.safe_height, None
 
     for op in plan.ops:
         kind = op[0]
@@ -91,17 +91,18 @@ def generate_gcode(heightmap: np.ndarray, p: CarveParams) -> str:
                 lines.append(f"G0 Z{retract}")
             lines.append(f"G0 X{_fmt((x + x_off) * f)} Y{_fmt((y + y_off) * f)}")
             lines.append(f"G1 Z{_fmt(z * f)}{plunge_f}")
-            cur_y, cur_z, need_feed = y, z, True
+            cur_y, cur_z, cur_f = y, z, plunge_f
 
         else:
-            pts = op[1]
-            # Emit a point when its (y,z) differs from the previous point (ramp target) or from
-            # the next one (end of a flat run); everything in between is redundant for G1.
-            yz = pts[:, 1:]
-            prev = np.vstack(([cur_y, cur_z], yz[:-1]))
-            start_diff = np.any(yz != prev, axis=1)
-            end_diff   = np.append(np.any(yz[1:] != yz[:-1], axis=1), True)
-            for x, y, z in pts[start_diff | end_diff]:
+            _, pts, link = op
+            # A point is emitted when its (y, z, link) differs from the previous point (ramp /
+            # feed-change target) or from the next one (end of a flat run); the rest is redundant.
+            key  = np.column_stack((pts[:, 1:], link))
+            prev = np.vstack(([cur_y, cur_z, False], key[:-1]))
+            start_diff = np.any(key != prev, axis=1)
+            end_diff   = np.append(np.any(key[1:] != key[:-1], axis=1), True)
+            for i in np.flatnonzero(start_diff | end_diff):
+                x, y, z = pts[i]
                 s = f"G1 X{_fmt((x + x_off) * f)}"
                 if y != cur_y:
                     s += f" Y{_fmt((y + y_off) * f)}"
@@ -109,9 +110,10 @@ def generate_gcode(heightmap: np.ndarray, p: CarveParams) -> str:
                 if z != cur_z:
                     s += f" Z{_fmt(z * f)}"
                     cur_z = z
-                if need_feed:
-                    s += feed_f
-                    need_feed = False
+                want_f = link_f if link[i] else feed_f
+                if want_f != cur_f:
+                    s += want_f
+                    cur_f = want_f
                 lines.append(s)
 
     lines += [

@@ -446,8 +446,11 @@ fieldset select { text-align: left; cursor: pointer; }
 .viewer-toggle .swatch {
   width: 10px; height: 10px;
   border-radius: 2px;
-  background: #ff2020;
+  margin-left: 4px;
 }
+.viewer-toggle .swatch.cut  { background: #ff2020; }
+.viewer-toggle .swatch.link { background: #3b9cff; }
+.viewer-toggle .swatch.hop  { background: #b0b0b0; }
 #viewer-hint {
   position: absolute;
   bottom: 10px;

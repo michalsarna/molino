@@ -222,8 +222,11 @@
 
       <div id="viewer-wrap">
         <div id="viewer"></div>
-        <label class="toggle-label viewer-toggle">
-          <span class="swatch"></span>Tool tip path
+        <label class="toggle-label viewer-toggle" title="Planned tool path: red = cutting, blue = link through a finished groove, grey = rapid">
+          Tool path
+          <span class="swatch cut"></span>cut
+          <span class="swatch link"></span>link
+          <span class="swatch hop"></span>rapid
           <input type="checkbox" id="ctrl-toolpath" />
           <span class="toggle"></span>
         </label>

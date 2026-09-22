@@ -294,15 +294,14 @@ function initViewer() {
   animate();
 }
 
-function buildWoodMesh(heightmap, rawHeightmap, rows, cols, params) {
+function buildWoodMesh(heightmap, rawHeightmap, toolpath, rows, cols, params) {
   if (woodGroup) {
     scene.remove(woodGroup);
     woodGroup.traverse(o => { if (o.geometry) { o.geometry.dispose(); o.material.dispose(); } });
     woodGroup = null;
   }
   if (toolPath) {
-    toolPath.geometry.dispose();
-    toolPath.material.dispose();
+    toolPath.traverse(o => { if (o.geometry) { o.geometry.dispose(); o.material.dispose(); } });
     toolPath = null;
   }
 
@@ -432,22 +431,51 @@ function buildWoodMesh(heightmap, rawHeightmap, rows, cols, params) {
 
   scene.add(woodGroup);
 
-  // ── 4. Tool-tip path: programmed depth along each raster row (cutting moves only) ──
-  // Lifted 0.15 mm above the surface so it doesn't z-fight where tip depth == surface.
+  // ── 4. Planned tool path: red = cutting, blue = link through a finished groove, grey = rapid ──
+  // Polylines arrive as [pass_max, x0, y0, x1, y1, ...] in stock mm; expand each row-wise span
+  // per pixel so the line follows the surface, lifted 0.15 mm to avoid z-fighting.
   {
-    const tipY = (i, j) => TH - rawHeightmap[i * srcCols + j] * CUT + 0.15;
-    const pts  = new Float32Array(srcRows * (srcCols - 1) * 6);
-    let k = 0;
-    for (let i = 0; i < srcRows; i++) {
-      const z = zAt(i + mi);
-      for (let j = 0; j < srcCols - 1; j++) {
-        pts[k++] = xAt(j + mj);     pts[k++] = tipY(i, j);     pts[k++] = z;
-        pts[k++] = xAt(j + 1 + mj); pts[k++] = tipY(i, j + 1); pts[k++] = z;
+    const xsSrc = params.width_mm  / Math.max(srcCols - 1, 1);
+    const ysSrc = params.height_mm / Math.max(srcRows - 1, 1);
+    const colOf = x => Math.min(srcCols - 1, Math.max(0, Math.round(x / xsSrc)));
+    const rowOf = y => Math.min(srcRows - 1, Math.max(0, Math.round(y / ysSrc)));
+    const tipY  = (i, j, pmax) => TH - Math.min(rawHeightmap[i * srcCols + j] * CUT, pmax) + 0.15;
+
+    const expand = polys => {
+      const out = [];
+      for (const poly of polys) {
+        const pmax = poly[0];
+        for (let v = 1; v + 3 < poly.length; v += 2) {
+          const ia = rowOf(poly[v + 1]), ib = rowOf(poly[v + 3]);
+          const ja = colOf(poly[v]),     jb = colOf(poly[v + 2]);
+          if (ia === ib) {
+            const s = jb >= ja ? 1 : -1;
+            for (let j = ja; j !== jb; j += s)
+              out.push(xAt(j + mj),     tipY(ia, j,     pmax), zAt(ia + mi),
+                       xAt(j + s + mj), tipY(ia, j + s, pmax), zAt(ia + mi));
+          } else {
+            out.push(xAt(ja + mj), tipY(ia, ja, pmax), zAt(ia + mi),
+                     xAt(jb + mj), tipY(ib, jb, pmax), zAt(ib + mi));
+          }
+        }
       }
+      return out;
+    };
+    const hopY = TH + params.retract_height;
+    const hops = [];
+    for (const [xa, ya, xb, yb] of toolpath.hops)
+      hops.push(xAt(colOf(xa) + mj), hopY, zAt(rowOf(ya) + mi),
+                xAt(colOf(xb) + mj), hopY, zAt(rowOf(yb) + mi));
+
+    toolPath = new THREE.Group();
+    for (const [flat, color] of [[expand(toolpath.cuts), 0xff2020],
+                                 [expand(toolpath.links), 0x3b9cff],
+                                 [hops, 0xb0b0b0]]) {
+      if (!flat.length) continue;
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(flat), 3));
+      toolPath.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color })));
     }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(pts, 3));
-    toolPath = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xff2020 }));
     toolPath.visible = ctrlToolPath.checked;
     scene.add(toolPath);
   }
@@ -513,7 +541,7 @@ async function generatePreview() {
     const data = await res.json();
 
     initViewer();
-    buildWoodMesh(data.heightmap, data.raw_heightmap, data.rows, data.cols, p);
+    buildWoodMesh(data.heightmap, data.raw_heightmap, data.toolpath, data.rows, data.cols, p);
     state.previewGenerated = true;
 
     const stepOver      = p.step_over;
