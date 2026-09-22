@@ -28,6 +28,10 @@ def generate_gcode(heightmap: np.ndarray, p: CarveParams) -> str:
     x_step = p.width_mm  / max(cols - 1, 1)
     y_step = p.height_mm / max(rows - 1, 1)
 
+    oy_name, ox_name = p.origin.split("-")
+    x_off = {"left": 0.0, "center": -p.width_mm / 2, "right": -p.width_mm}[ox_name]
+    y_off = {"bottom": 0.0, "middle": -p.height_mm / 2, "top": -p.height_mm}[oy_name]
+
     q_depths = np.round(heightmap * p.cut_depth / Z_STEP) * Z_STEP   # mm, quantised
     row_max  = q_depths.max(axis=1)
 
@@ -48,6 +52,7 @@ def generate_gcode(heightmap: np.ndarray, p: CarveParams) -> str:
         f"; Feed rate:      {_fmt(p.feed_rate * f)} {unit}/min",
         f"; Plunge rate:    {_fmt(p.plunge_rate * f)} {unit}/min",
         f"; Tool:           {tool}",
+        f"; Work origin:    X0 Y0 at stock {p.origin}, Z0 at stock top",
         "; ============================================================",
         "",
         f"{unit_cmd}        ; {unit} units",
@@ -86,13 +91,13 @@ def generate_gcode(heightmap: np.ndarray, p: CarveParams) -> str:
             first = order[0]
             z = -float(depths[first])
             lines.append(safe)
-            lines.append(f"G0 X{_fmt(first * x_step * f)} Y{_fmt(y * f)}")
+            lines.append(f"G0 X{_fmt((first * x_step + x_off) * f)} Y{_fmt((y + y_off) * f)}")
             lines.append(f"G1 Z{_fmt(z * f)}{plunge}")
 
             prev_z = z
             for i, c in enumerate(order[1:]):
                 z  = -float(depths[c])
-                xs = f"G1 X{_fmt(c * x_step * f)}"
+                xs = f"G1 X{_fmt((c * x_step + x_off) * f)}"
                 if abs(z - prev_z) >= Z_STEP - 1e-9:
                     xs += f" Z{_fmt(z * f)}"
                     prev_z = z

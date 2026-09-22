@@ -216,6 +216,7 @@ function collectParams() {
     plunge_rate:    mm("p-plunge"),
     safe_height:    mm("p-safe-h"),
     units:          state.units,
+    origin:         document.querySelector('input[name="origin"]:checked').value,
   };
 }
 
@@ -278,7 +279,7 @@ function initViewer() {
 function buildWoodMesh(heightmap, rawHeightmap, rows, cols, params) {
   if (woodGroup) {
     scene.remove(woodGroup);
-    woodGroup.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+    woodGroup.traverse(o => { if (o.geometry) { o.geometry.dispose(); o.material.dispose(); } });
     woodGroup = null;
   }
   if (toolPath) {
@@ -433,6 +434,29 @@ function buildWoodMesh(heightmap, rawHeightmap, rows, cols, params) {
     scene.add(toolPath);
   }
 
+  // ── 5. Work-origin marker on the stock top: dot at X0 Y0, +X red, +Y green ──
+  {
+    const [oy, ox] = params.origin.split("-");
+    const W0 = params.width_mm, H0 = params.height_mm;
+    const fx = { left: 0, center: 0.5, right: 1 }[ox];
+    const fy = { bottom: 0, middle: 0.5, top: 1 }[oy];
+    // Interpolate along the unpadded grid so the marker lands exactly on the stock edge
+    const wx = xAt(mj) + fx * (xAt(mj + srcCols - 1) - xAt(mj));
+    const wz = zAt(mi) + fy * (zAt(mi + srcRows - 1) - zAt(mi));
+    const len = Math.min(W0, H0) * 0.15;
+
+    const axis = (dx, dz, color) => new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(dx, 0, dz)]),
+      new THREE.LineBasicMaterial({ color }));
+    const marker = new THREE.Group();
+    marker.add(new THREE.Mesh(new THREE.SphereGeometry(Math.max(0.6, len * 0.08), 12, 8),
+                              new THREE.MeshBasicMaterial({ color: 0x40d0ff })));
+    marker.add(axis(len, 0, 0xff4040));   // machine +X
+    marker.add(axis(0, -len, 0x40ff40));  // machine +Y (image up = world -Z)
+    marker.position.set(wx, TH + 0.2, wz);
+    woodGroup.add(marker);
+  }
+
   // Subtle ground grid for depth reference
   scene.children.filter(c => c.isGridHelper).forEach(g => scene.remove(g));
   const maxDim = Math.max(W, Dz);
@@ -498,6 +522,7 @@ async function generatePreview() {
       (depthPasses > 1 ? `${depthPasses} depth passes &nbsp;|&nbsp; ` : "") +
       `${rasterLines} raster lines &nbsp;|&nbsp; ` +
       `Tool: <b>${toolLabel}</b> &nbsp;|&nbsp; ` +
+      `Origin: <b>${p.origin.replace("-", " ")}</b> &nbsp;|&nbsp; ` +
       `Est: <b>~${timeLabel}</b>`;
   } catch (err) {
     alert("Error generating preview:\n" + err.message);

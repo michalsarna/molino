@@ -176,6 +176,20 @@
             Safe height <span class="unit-label">(mm)</span>
             <input type="number" id="p-safe-h" value="5.0" min="0.001" step="any" data-unit="length" data-mm="5.0" />
           </label>
+          <div class="origin-picker">
+            <span>Work origin (X0 Y0)</span>
+            <div class="origin-grid" role="radiogroup" aria-label="Work origin">
+              <label title="Top left"><input type="radio" name="origin" value="top-left" /><span></span></label>
+              <label title="Top center"><input type="radio" name="origin" value="top-center" /><span></span></label>
+              <label title="Top right"><input type="radio" name="origin" value="top-right" /><span></span></label>
+              <label title="Middle left"><input type="radio" name="origin" value="middle-left" /><span></span></label>
+              <label title="Center"><input type="radio" name="origin" value="middle-center" /><span></span></label>
+              <label title="Middle right"><input type="radio" name="origin" value="middle-right" /><span></span></label>
+              <label title="Bottom left"><input type="radio" name="origin" value="bottom-left" checked /><span></span></label>
+              <label title="Bottom center"><input type="radio" name="origin" value="bottom-center" /><span></span></label>
+              <label title="Bottom right"><input type="radio" name="origin" value="bottom-right" /><span></span></label>
+            </div>
+          </div>
         </fieldset>
 
       </div>

@@ -53,6 +53,22 @@ def test_gcode_depth_per_pass_clamped_to_cut_depth():
     assert "Z-2.0000" in code
 
 
+def test_gcode_work_origin_shifts_xy():
+    hm = np.full((3, 3), 0.5, dtype=np.float32)
+    xs = lambda c: [float(v) for v in re.findall(r"G[01] X(-?\d+\.\d+)", c)]
+    ys = lambda c: [float(v) for v in re.findall(r" Y(-?\d+\.\d+)", c)]
+
+    bl = generate_gcode(hm, params(width_mm=10, height_mm=20))
+    assert (min(xs(bl)), max(xs(bl)), min(ys(bl)), max(ys(bl))) == (0, 10, 0, 20)
+
+    cc = generate_gcode(hm, params(width_mm=10, height_mm=20, origin="middle-center"))
+    assert (min(xs(cc)), max(xs(cc)), min(ys(cc)), max(ys(cc))) == (-5, 5, -10, 10)
+
+    tr = generate_gcode(hm, params(width_mm=10, height_mm=20, origin="top-right"))
+    assert (min(xs(tr)), max(xs(tr)), min(ys(tr)), max(ys(tr))) == (-10, 0, -20, 0)
+    assert "Work origin:    X0 Y0 at stock top-right" in tr
+
+
 # ── STL ───────────────────────────────────────────────────────────────────
 
 def test_stl_binary_layout():
