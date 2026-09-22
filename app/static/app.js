@@ -13,6 +13,7 @@ const state = {
   units: "metric",   // "metric" | "imperial"
   version: "0.00",
   previewGenerated: false,
+  previewStale: false,      // parameters changed since the last preview
   originalFileName: "",
 };
 
@@ -50,6 +51,7 @@ const rowTip    = document.getElementById("row-tip-angle");
 const loadingOverlay = document.getElementById("loading-overlay");
 const exportInfo     = document.getElementById("export-info");
 const ctrlToolPath   = document.getElementById("ctrl-toolpath");
+const ctrlLeftover   = document.getElementById("ctrl-leftover");
 
 // ── Step navigation ───────────────────────────────────────────────────────
 function showStep(n) {
@@ -240,6 +242,7 @@ function collectParams() {
 
 // ── 3D Viewer ─────────────────────────────────────────────────────────────
 let renderer, scene, camera, controls, woodGroup, toolPath, viewerRaf = 0;
+let topGeo, topColBase, topColTint;   // carved surface geometry + plain / unreachable-tinted colours
 
 window.addEventListener("resize", () => {
   if (!renderer) return;
@@ -294,7 +297,7 @@ function initViewer() {
   animate();
 }
 
-function buildWoodMesh(heightmap, pathHeightmap, toolpath, rows, cols, params) {
+function buildWoodMesh(heightmap, pathHeightmap, leftover, toolpath, rows, cols, params) {
   if (woodGroup) {
     scene.remove(woodGroup);
     woodGroup.traverse(o => { if (o.geometry) { o.geometry.dispose(); o.material.dispose(); } });
@@ -326,11 +329,15 @@ function buildWoodMesh(heightmap, pathHeightmap, toolpath, rows, cols, params) {
     mi  = Math.max(1, Math.round(MARGIN / pxZ));
     const nc  = cols + 2 * mj;
     const nr  = rows + 2 * mi;
-    const pad = new Float32Array(nc * nr); // zeros = no cut
+    const pad = new Float32Array(nc * nr);  // zeros = no cut
+    const padL = new Float32Array(nc * nr); // zeros = nothing unreachable
     for (let i = 0; i < rows; i++)
-      for (let j = 0; j < cols; j++)
-        pad[(i + mi) * nc + (j + mj)] = heightmap[i * cols + j];
+      for (let j = 0; j < cols; j++) {
+        pad[(i + mi) * nc + (j + mj)]  = heightmap[i * cols + j];
+        padL[(i + mi) * nc + (j + mj)] = leftover[i * cols + j];
+      }
     heightmap = pad;
+    leftover  = padL;
     cols = nc; rows = nr;
     W  += 2 * MARGIN;
     Dz += 2 * MARGIN;
@@ -351,8 +358,9 @@ function buildWoodMesh(heightmap, pathHeightmap, toolpath, rows, cols, params) {
   {
     const n   = rows * cols;
     const pos = new Float32Array(n * 3);
-    const col = new Float32Array(n * 3);
-    const idx = [];
+    const col  = new Float32Array(n * 3);
+    const tint = new Float32Array(n * 3);
+    const idx  = [];
 
     for (let i = 0; i < rows; i++) {
       for (let j = 0; j < cols; j++) {
@@ -361,9 +369,14 @@ function buildWoodMesh(heightmap, pathHeightmap, toolpath, rows, cols, params) {
         pos[k * 3 + 1] = yAt(i, j);
         pos[k * 3 + 2] = zAt(i);
         const t = heightmap[k];
-        col[k * 3]     = 0.72 - t * 0.28;
-        col[k * 3 + 1] = 0.50 - t * 0.22;
-        col[k * 3 + 2] = 0.24 - t * 0.12;
+        const r = 0.72 - t * 0.28, g = 0.50 - t * 0.22, b = 0.24 - t * 0.12;
+        col[k * 3] = r; col[k * 3 + 1] = g; col[k * 3 + 2] = b;
+        // Tint towards magenta where the tool can't reach the target;
+        // full tint at 20% of the cut depth (at least 1 mm) so the shading stays graded
+        const lv = Math.min(1, leftover[k] * CUT / Math.max(1, 0.2 * CUT));
+        tint[k * 3]     = r + (0.88 - r) * lv;
+        tint[k * 3 + 1] = g + (0.20 - g) * lv;
+        tint[k * 3 + 2] = b + (0.70 - b) * lv;
       }
     }
     // With reversed zAt, Z decreases as i increases → winding a,b,c / b,d,c gives +Y normals
@@ -375,10 +388,11 @@ function buildWoodMesh(heightmap, pathHeightmap, toolpath, rows, cols, params) {
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-    geo.setAttribute("color",    new THREE.BufferAttribute(col, 3));
+    geo.setAttribute("color",    new THREE.BufferAttribute(ctrlLeftover.checked ? tint : col, 3));
     geo.setIndex(idx);
     geo.computeVertexNormals();
     woodGroup.add(new THREE.Mesh(geo, carveMat));
+    topGeo = geo; topColBase = col; topColTint = tint;
   }
 
   // ── 2. Bottom face (Y=0, -Y normal) ─────────────────────────────
@@ -541,8 +555,9 @@ async function generatePreview() {
     const data = await res.json();
 
     initViewer();
-    buildWoodMesh(data.heightmap, data.path_heightmap, data.toolpath, data.rows, data.cols, p);
+    buildWoodMesh(data.heightmap, data.path_heightmap, data.leftover, data.toolpath, data.rows, data.cols, p);
     state.previewGenerated = true;
+    state.previewStale = false;
 
     const stepOver      = p.step_over;
     const rasterLines   = data.raster_lines;
@@ -566,6 +581,7 @@ async function generatePreview() {
       `${rasterLines} raster lines &nbsp;|&nbsp; ` +
       `Tool: <b>${toolLabel}</b> &nbsp;|&nbsp; ` +
       `Origin: <b>${p.origin.replace("-", " ")}</b> &nbsp;|&nbsp; ` +
+      `Unreachable: <b>${data.unreachable_pct.toFixed(0)}%</b> (max ${fmt(data.leftover_max_mm)}) &nbsp;|&nbsp; ` +
       `Est: <b>~${timeLabel}</b>`;
   } catch (err) {
     alert("Error generating preview:\n" + err.message);
@@ -647,6 +663,15 @@ btnBack3.addEventListener("click", () => showStep(2));
 ctrlToolPath.addEventListener("change", () => {
   if (toolPath) toolPath.visible = ctrlToolPath.checked;
 });
+ctrlLeftover.addEventListener("change", () => {
+  if (topGeo) topGeo.setAttribute("color", new THREE.BufferAttribute(ctrlLeftover.checked ? topColTint : topColBase, 3));
+});
+
+// Any parameter edit makes the current preview stale; entering step 3 then re-plans
+document.querySelectorAll("#step-2 input, #step-2 select").forEach(el => {
+  el.addEventListener("input",  () => { state.previewStale = true; });
+  el.addEventListener("change", () => { state.previewStale = true; });
+});
 
 btnDlStl.addEventListener("click",   () => downloadFile("/api/download/stl",   `molino_v${state.version}_${state.originalFileName}_carve.stl`));
 btnDlGcode.addEventListener("click", () => downloadFile("/api/download/gcode", `molino_v${state.version}_${state.originalFileName}_carve.gcode`));
@@ -660,7 +685,10 @@ document.querySelectorAll(".step-indicator").forEach(el => {
     const n = parseInt(el.dataset.step);
     if (n === 1) { showStep(1); return; }
     if (n === 2 && state.originalPixels)   { showStep(2); return; }
-    if (n === 3 && state.previewGenerated) { showStep(3); return; }
+    if (n === 3 && state.originalPixels) {
+      showStep(3);
+      if (!state.previewGenerated || state.previewStale) generatePreview();
+    }
   });
 });
 

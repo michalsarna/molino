@@ -18,7 +18,8 @@ from app.toolpath import plan_toolpath, preview_paths, quantise
 app = FastAPI(title="Molino", version=__version__)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-PREVIEW_RES  = 200    # max grid size for the 3D preview
+PREVIEW_RES      = 200   # preview grid columns
+PREVIEW_MAX_ROWS = 400   # preview rows follow the real raster spacing up to this many
 STL_RES      = 300    # max grid size for STL export
 STL_STEP_MM  = 0.5    # target STL grid spacing
 GCODE_MAX    = 2000   # max grid size for G-code
@@ -57,29 +58,37 @@ async def index():
 @app.post("/api/preview")
 async def preview(req: GenerateRequest):
     p = req.params
-    aspect = p.width_mm / p.height_mm
-    cols, rows = (PREVIEW_RES, max(1, int(PREVIEW_RES / aspect))) if aspect >= 1 \
-                 else (max(1, int(PREVIEW_RES * aspect)), PREVIEW_RES)
+    # Rows follow the real raster spacing (capped) so the drawn path has the right line density
+    real_rows = _grid(p.width_mm, p.height_mm, p.step_over, 10, GCODE_MAX)[1]
+    cols, rows = PREVIEW_RES, min(PREVIEW_MAX_ROWS, real_rows)
 
     raw = _load_heightmap(req, cols, rows)
     x_step, y_step = p.width_mm / max(cols - 1, 1), p.height_mm / max(rows - 1, 1)
-    path = quantise(tool_path_depths(raw * p.cut_depth, p, x_step, y_step))   # tool-centre depth, mm
-    sim  = machined_surface(path, p, x_step, y_step) / p.cut_depth             # what the carve will look like
+    target   = raw * p.cut_depth
+    path     = quantise(tool_path_depths(target, p, x_step, y_step))   # tool-centre depth, mm
+    sim      = machined_surface(path, p, x_step, y_step)               # what the carve will look like
+    leftover = np.clip(target - sim, 0, None)                          # material the tool cannot reach
+    to_cut   = target > 0.05
+    unreachable_pct = float(100 * (leftover[to_cut] > 0.05).mean()) if to_cut.any() else 0.0
 
-    # Plan at preview resolution, then scale to the real raster line count
     plan = plan_toolpath(path, p, x_step, y_step)
-    real_rows = _grid(p.width_mm, p.height_mm, p.step_over, 10, GCODE_MAX)[1]
     estimate_min = plan.minutes(p) * real_rows / rows + 2 / 60
 
+    def norm(a):
+        return np.round(a / p.cut_depth, 4).flatten().tolist()
+
     return {
-        "heightmap":      sim.flatten().tolist(),                    # simulated machined surface
-        "path_heightmap": (path / p.cut_depth).flatten().tolist(),   # tool-centre depth the G-code follows
+        "heightmap":       norm(sim),
+        "path_heightmap":  norm(path),
+        "leftover":        norm(leftover),
+        "leftover_max_mm": float(leftover.max()),
+        "unreachable_pct": unreachable_pct,
         "rows": rows,
         "cols": cols,
         "raster_lines": real_rows,
         "passes": plan.passes,
         "estimate_min": estimate_min,
-        "toolpath": preview_paths(plan),           # planned path at preview resolution
+        "toolpath": preview_paths(plan),
     }
 
 
