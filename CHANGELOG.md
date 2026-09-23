@@ -4,6 +4,17 @@ Per-version history. Feature overview lives in [README.md](README.md).
 
 ---
 
+## v0.28
+
+- **Privacy / ePrivacy compliance** — audit found no cookies anywhere (none set by the server, none by the client). Two things were tightened so no consent banner is required:
+  - The theme is written to `localStorage` **only when you press the theme button** (a user-chosen UI preference is exempt from consent; an automatic write on page load is not). A "Forget my theme choice" button removes it
+  - **Three.js is now self-hosted** (`app/static/vendor/three`, MIT) instead of loaded from the jsDelivr CDN, so no visitor IP is disclosed to a third party — and the app works offline
+- **Privacy & browser storage notice** — footer link opens a plain-language dialog: cookies (none), local storage (what, when, how to remove), image handling (in memory, never stored), third parties (none), server logs
+- Test asserts no `Set-Cookie` headers, no external script URLs, and that the vendored library is served
+- **Version bumped to 0.28**
+
+---
+
 ## v0.27
 
 - **Light / dark theme** — toggle button in the header (☀ / ☾). Defaults to the system preference, remembered in the browser, applied before first paint so there's no flash. The 3D viewer background and ground grid follow the theme; native form controls switch via `color-scheme`

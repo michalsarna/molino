@@ -2,7 +2,7 @@
 
 > **Photo → CNC wood carving** — upload a photo, tune it, and get a G-code toolpath and STL model ready to carve.
 
-[![Live](https://img.shields.io/badge/version-0.27-amber)](https://github.com/michalsarna/molino)
+[![Live](https://img.shields.io/badge/version-0.28-amber)](https://github.com/michalsarna/molino)
 
 ## What it does
 
@@ -72,6 +72,15 @@ docker compose down             # stop
 | Feed rate | XY cutting speed in mm/min |
 | Plunge rate | Z plunge speed in mm/min |
 | Safe height | Z height for rapid moves between passes |
+
+## Privacy
+
+- **No cookies**, no accounts, no analytics, no tracking — the server sets no cookies and the client sets none.
+- **Browser storage:** a single `localStorage` item (`theme`) is written only when you press the theme button; the in-app *Privacy & browser storage* notice (footer) shows what is stored and offers a one-click "forget".
+- **Your image** is sent to the server only when you generate a preview or a download, processed in memory for that request and never written to disk.
+- **No third parties:** all assets, including Three.js, are served from the app itself — it also works offline.
+
+Under the EU ePrivacy rules this means no consent banner is required: the only device storage is a user-chosen UI preference, which is exempt, and there is no third-party data transfer. Operators should still be aware that their web server / reverse proxy may log IP addresses.
 
 ## Versioning & contributing
 

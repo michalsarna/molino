@@ -716,15 +716,35 @@ btnDlGcode.addEventListener("click", () => downloadFile("/api/download/gcode", `
 
 // ── Theme ──────────────────────────────────────────────────────────────────
 const themeBtn = document.getElementById("theme-toggle");
-function setTheme(theme) {
+const systemTheme = () => matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+
+// Persist only on an explicit click: an unrequested write to the device needs consent
+// under ePrivacy, a user-chosen UI preference does not.
+function setTheme(theme, persist) {
   document.documentElement.dataset.theme = theme;
-  localStorage.setItem("theme", theme);
+  if (persist) localStorage.setItem("theme", theme);
   themeBtn.textContent = theme === "dark" ? "☀" : "☾";   // sun = go light, moon = go dark
   applyViewerTheme();
+  updatePrivacyStatus();
 }
-setTheme(document.documentElement.dataset.theme || "dark");
+setTheme(document.documentElement.dataset.theme || systemTheme(), false);
 themeBtn.addEventListener("click", () =>
-  setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
+  setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark", true));
+
+// ── Privacy notice ─────────────────────────────────────────────────────────
+const privacyDialog = document.getElementById("privacy");
+function updatePrivacyStatus() {
+  const stored = localStorage.getItem("theme");
+  document.getElementById("privacy-status").textContent =
+    stored ? `Currently stored: "${stored}".` : "Nothing is stored right now.";
+  document.getElementById("privacy-forget").disabled = !stored;
+}
+document.getElementById("privacy-open").addEventListener("click", () => { updatePrivacyStatus(); privacyDialog.showModal(); });
+document.getElementById("privacy-close").addEventListener("click", () => privacyDialog.close());
+document.getElementById("privacy-forget").addEventListener("click", () => {
+  localStorage.removeItem("theme");
+  setTheme(systemTheme(), false);
+});
 
 // ── Logo click → new session ───────────────────────────────────────────────
 document.querySelector(".logo").addEventListener("click", () => location.reload());

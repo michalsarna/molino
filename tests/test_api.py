@@ -62,6 +62,18 @@ def test_auto_step_over_changes_the_plan_with_tool_angle(png_b64):
     assert ridge60 == pytest.approx(0.1, abs=1e-6) and ridge45 == pytest.approx(0.1, abs=1e-6)
 
 
+def test_no_cookies_and_no_third_party_assets():
+    page = client.get("/")
+    assert page.status_code == 200
+    for r in (page, client.get("/api/info")):
+        assert "set-cookie" not in {k.lower() for k in r.headers}
+    assert "cdn.jsdelivr" not in page.text and 'src="http' not in page.text
+    for path in ("/static/vendor/three/three.module.js",
+                 "/static/vendor/three/addons/controls/OrbitControls.js",
+                 "/static/vendor/three/LICENSE"):
+        assert client.get(path).status_code == 200, path
+
+
 def test_invalid_image_is_a_400():
     r = client.post("/api/preview", json={"image_data": "data:image/png;base64,!!!notbase64"})
     assert r.status_code == 400
