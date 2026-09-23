@@ -12,9 +12,9 @@ class CarveParams(BaseModel):
     height_mm:      float = Field(200.0, gt=0)
     cut_depth:      float = Field(10.0, gt=0)
     wood_thickness: float = Field(18.0, gt=0)
-    step_over:      float = Field(0.25, gt=0)      # used when step_over_mode == "manual"
-    step_over_mode: Literal["manual", "auto"] = "manual"
-    max_ridge:      float = Field(0.1, gt=0)       # auto mode: largest ridge allowed between passes
+    step_over_mode: Literal["percent", "auto"] = "percent"
+    step_over_pct:  float = Field(25.0, gt=0, le=100)   # percent mode: spacing as % of tool diameter
+    max_ridge:      float = Field(0.1, gt=0)            # auto mode: largest ridge allowed between passes
     depth_per_pass: float = Field(1.0, gt=0)
 
     bit_type:     Literal["vbit", "endmill", "ballnose"] = "vbit"

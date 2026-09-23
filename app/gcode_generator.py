@@ -49,7 +49,7 @@ def generate_gcode(heightmap: np.ndarray, p: CarveParams) -> str:
         slope = float(np.hypot(gx, gy).max())
     ridge = ridge_height(p, y_step, slope)
     step_mode = (f"auto, max ridge {_fmt(p.max_ridge * f)} {unit}" if p.step_over_mode == "auto"
-                 else "manual")
+                 else f"{p.step_over_pct:g}% of tool diameter")
 
     lines = [
         "; ============================================================",

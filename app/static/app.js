@@ -48,7 +48,8 @@ const pWidth    = document.getElementById("p-width");
 const pHeight   = document.getElementById("p-height");
 const pBitType  = document.getElementById("p-bit-type");
 const pStepMode = document.getElementById("p-step-mode");
-const pStepOver = document.getElementById("p-step-over");
+const pStepPct  = document.getElementById("p-step-pct");
+const rowStepPct = document.getElementById("row-step-pct");
 const rowRidge  = document.getElementById("row-max-ridge");
 const rowTip    = document.getElementById("row-tip-angle");
 const loadingOverlay = document.getElementById("loading-overlay");
@@ -230,7 +231,7 @@ function collectParams() {
     tip_angle:      parseFloat(document.getElementById("p-tip-angle").value),
     cut_depth:      mm("p-cut-depth"),
     wood_thickness: mm("p-wood-thick"),
-    step_over:      mm("p-step-over"),
+    step_over_pct:  parseFloat(pStepPct.value),
     step_over_mode: pStepMode.value,
     max_ridge:      mm("p-max-ridge"),
     depth_per_pass: mm("p-depth-per-pass"),
@@ -564,10 +565,6 @@ async function generatePreview() {
     state.previewGenerated = true;
     state.previewStale = false;
 
-    if (p.step_over_mode === "auto") {          // show the spacing the tool profile produced
-      pStepOver.dataset.mm = data.step_over_mm;
-      pStepOver.value = formatDisplay(toDisplay(data.step_over_mm), "length");
-    }
     const rasterLines   = data.raster_lines;
     const depthPasses   = data.passes;
     const estHours      = Math.floor(data.estimate_min / 60);
@@ -584,7 +581,7 @@ async function generatePreview() {
     exportInfo.innerHTML =
       `Size: <b>${fmt(p.width_mm)} × ${fmt(p.height_mm)}</b> &nbsp;|&nbsp; ` +
       `Depth: <b>${fmt(p.cut_depth)}</b> &nbsp;|&nbsp; ` +
-      `Step: <b>${fmt(data.step_over_mm)}</b> (ridge ${fmt(data.ridge_mm)}) &nbsp;|&nbsp; ` +
+      `Step: <b>${fmt(data.step_over_mm)}</b> (${p.step_over_mode === "percent" ? `${p.step_over_pct}% ⌀, ` : ""}ridge ${fmt(data.ridge_mm)}) &nbsp;|&nbsp; ` +
       (depthPasses > 1 ? `${depthPasses} depth passes &nbsp;|&nbsp; ` : "") +
       `${rasterLines} raster lines &nbsp;|&nbsp; ` +
       `Tool: <b>${toolLabel}</b> &nbsp;|&nbsp; ` +
@@ -660,8 +657,8 @@ pBitType.addEventListener("change", () => {
 
 pStepMode.addEventListener("change", () => {
   const auto = pStepMode.value === "auto";
-  rowRidge.style.display = auto ? "" : "none";
-  pStepOver.readOnly = auto;                  // filled in from the preview in auto mode
+  rowRidge.style.display   = auto ? "" : "none";
+  rowStepPct.style.display = auto ? "none" : "";
 });
 
 btnNext1.addEventListener("click", () => showStep(2));

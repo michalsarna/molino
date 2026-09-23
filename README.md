@@ -2,7 +2,7 @@
 
 > **Photo → CNC wood carving** — upload a photo, tune it, and get a G-code toolpath and STL model ready to carve.
 
-[![Live](https://img.shields.io/badge/version-0.25-amber)](https://github.com/michalsarna/molino)
+[![Live](https://img.shields.io/badge/version-0.26-amber)](https://github.com/michalsarna/molino)
 
 ## What it does
 
@@ -75,7 +75,7 @@ docker compose down             # stop
 
 ## Versioning & contributing
 
-Branch names correspond to version numbers (`XX.yy` format). All changes to `master` go through pull requests. Each merged PR bumps the version. Per-version feature history is in [FEATURES.md](FEATURES.md).
+Branch names correspond to version numbers (`XX.yy` format). All changes to `master` go through pull requests. Each merged PR bumps the version. Per-version history is in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
