@@ -29,8 +29,7 @@
 
   <nav class="steps-nav">
     <div class="step-indicator active" data-step="1"><span>1</span> Image</div>
-    <div class="step-indicator" data-step="2"><span>2</span> Parameters</div>
-    <div class="step-indicator" data-step="3"><span>3</span> Export</div>
+    <div class="step-indicator" data-step="2"><span>2</span> Carve &amp; Export</div>
   </nav>
 
   <!-- ── STEP 1: Upload & Adjust ─────────────────────────────────── -->
@@ -100,17 +99,20 @@
 
       <div class="step-actions">
         <button id="btn-next-1" class="btn primary" disabled>
-          Next: Parameters →
+          Next: Carve →
         </button>
       </div>
     </div>
   </section>
 
-  <!-- ── STEP 2: Parameters ──────────────────────────────────────── -->
+  <!-- ── STEP 2: Parameters + live 3D preview + export ───────────── -->
   <section id="step-2" class="step">
-    <div class="step-inner">
-      <h2>Machining Parameters</h2>
+    <div class="step-inner wide">
+      <h2>Carve &amp; Export</h2>
+      <p class="hint">Change any parameter — the 3D preview, path plan and estimate update automatically.</p>
 
+      <div class="carve-layout">
+      <aside class="params-pane">
       <div class="units-bar">
         <span>Unit system:</span>
         <label><input type="radio" name="units" value="metric" checked /> Metric (mm)</label>
@@ -226,18 +228,12 @@
 
       </div>
 
-      <div class="step-actions">
-        <button id="btn-back-2" class="btn secondary">← Back</button>
-        <button id="btn-generate" class="btn primary">Generate Preview →</button>
+      <div class="step-actions left">
+        <button id="btn-back-2" class="btn secondary">← Back to image</button>
       </div>
-    </div>
-  </section>
+      </aside>
 
-  <!-- ── STEP 3: 3D Preview & Export ────────────────────────────── -->
-  <section id="step-3" class="step">
-    <div class="step-inner wide">
-      <h2>3D Preview &amp; Export</h2>
-
+      <div class="viewer-pane">
       <div id="viewer-wrap">
         <div id="viewer"></div>
         <div class="viewer-toggles">
@@ -258,18 +254,19 @@
         <div id="viewer-hint">Drag to rotate · Scroll to zoom · Right-drag to pan</div>
         <div id="loading-overlay" class="hidden">
           <div class="spinner"></div>
-          <span>Generating…</span>
+          <span>Updating…</span>
         </div>
       </div>
 
       <div class="export-row">
-        <div class="export-info" id="export-info"></div>
+        <div class="export-info" id="export-info">Adjust the parameters on the left; the preview appears here.</div>
         <div class="export-btns">
-          <button id="btn-dl-stl" class="btn primary">&#8595; Download STL</button>
-          <button id="btn-dl-gcode" class="btn primary">&#8595; Download G-code</button>
-          <button id="btn-back-3" class="btn secondary">← Back to Parameters</button>
+          <button id="btn-dl-stl" class="btn primary" disabled>&#8595; Download STL</button>
+          <button id="btn-dl-gcode" class="btn primary" disabled>&#8595; Download G-code</button>
         </div>
       </div>
+      </div><!-- /viewer-pane -->
+      </div><!-- /carve-layout -->
     </div>
   </section>
 
