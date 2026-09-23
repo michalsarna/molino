@@ -4,6 +4,13 @@ Per-version history. Feature overview lives in [README.md](README.md).
 
 ---
 
+## v0.27
+
+- **Light / dark theme** — toggle button in the header (☀ / ☾). Defaults to the system preference, remembered in the browser, applied before first paint so there's no flash. The 3D viewer background and ground grid follow the theme; native form controls switch via `color-scheme`
+- **Version bumped to 0.27**
+
+---
+
 ## v0.26
 
 - **Step over as % of tool diameter** — spacing is now entered as a percentage of the bit diameter (default 25 %), so it scales with the tool automatically; *Auto from finish* remains available. The mm value it produces is shown in the export info and G-code header

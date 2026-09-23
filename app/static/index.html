@@ -6,6 +6,11 @@
   <title>Molino — Photo to CNC</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
   <link rel="stylesheet" href="/static/style.css" />
+  <script>
+    // Apply the saved (or system) theme before first paint to avoid a flash
+    document.documentElement.dataset.theme = localStorage.getItem("theme")
+      || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  </script>
   <script type="importmap">
   {
     "imports": {
@@ -19,6 +24,7 @@
   <header>
     <div class="logo">&#9658; molino</div>
     <div class="version"></div>
+    <button id="theme-toggle" type="button" title="Switch light / dark theme" aria-label="Switch theme"></button>
   </header>
 
   <nav class="steps-nav">

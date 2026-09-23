@@ -249,6 +249,25 @@ function collectParams() {
 // ── 3D Viewer ─────────────────────────────────────────────────────────────
 let renderer, scene, camera, controls, woodGroup, toolPath, viewerRaf = 0;
 let topGeo, topColBase, topColTint;   // carved surface geometry + plain / unreachable-tinted colours
+let gridDim = 0;
+
+function cssColor(name) {
+  return new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue(name).trim());
+}
+
+function addGrid(dim) {
+  gridDim = dim;
+  scene.children.filter(c => c.isGridHelper).forEach(g => { scene.remove(g); g.geometry.dispose(); g.material.dispose(); });
+  const grid = new THREE.GridHelper(dim * 3, 16, cssColor("--grid-a"), cssColor("--grid-b"));
+  grid.position.y = -0.5;
+  scene.add(grid);
+}
+
+function applyViewerTheme() {
+  if (!scene) return;
+  scene.background = cssColor("--viewer-bg");
+  if (gridDim) addGrid(gridDim);
+}
 
 window.addEventListener("resize", () => {
   if (!renderer) return;
@@ -269,7 +288,7 @@ function initViewer() {
   }
 
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x181a1d);
+  scene.background = cssColor("--viewer-bg");
 
   const w = container.clientWidth || 800, h = container.clientHeight || 480;
   camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 50000);
@@ -524,11 +543,8 @@ function buildWoodMesh(heightmap, pathHeightmap, leftover, toolpath, rows, cols,
   }
 
   // Subtle ground grid for depth reference
-  scene.children.filter(c => c.isGridHelper).forEach(g => scene.remove(g));
   const maxDim = Math.max(W, Dz);
-  const grid = new THREE.GridHelper(maxDim * 3, 16, 0x2a2d32, 0x1e2124);
-  grid.position.y = -0.5;
-  scene.add(grid);
+  addGrid(maxDim);
 
   // Camera at +Z, centered in X → screen right = +X, image orientation matches photo
   camera.position.set(0, TH + maxDim * 1.0, Dz * 0.9);
@@ -697,6 +713,18 @@ function setupTag() {
 
 btnDlStl.addEventListener("click",   () => downloadFile("/api/download/stl",   `molino_v${state.version}_${state.originalFileName}_carve.stl`));
 btnDlGcode.addEventListener("click", () => downloadFile("/api/download/gcode", `molino_v${state.version}_${state.originalFileName}_${setupTag()}.gcode`));
+
+// ── Theme ──────────────────────────────────────────────────────────────────
+const themeBtn = document.getElementById("theme-toggle");
+function setTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem("theme", theme);
+  themeBtn.textContent = theme === "dark" ? "☀" : "☾";   // sun = go light, moon = go dark
+  applyViewerTheme();
+}
+setTheme(document.documentElement.dataset.theme || "dark");
+themeBtn.addEventListener("click", () =>
+  setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
 
 // ── Logo click → new session ───────────────────────────────────────────────
 document.querySelector(".logo").addEventListener("click", () => location.reload());
