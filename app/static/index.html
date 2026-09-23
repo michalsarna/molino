@@ -14,8 +14,8 @@
   <script type="importmap">
   {
     "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/"
+      "three": "/static/vendor/three/three.module.js",
+      "three/addons/": "/static/vendor/three/addons/"
     }
   }
   </script>
@@ -272,6 +272,36 @@
       </div>
     </div>
   </section>
+
+  <footer>
+    <span>No cookies. Images are processed in memory and never stored.</span>
+    <button id="privacy-open" type="button" class="link">Privacy &amp; browser storage</button>
+  </footer>
+
+  <dialog id="privacy">
+    <h3>Privacy &amp; browser storage</h3>
+    <dl>
+      <dt>Cookies</dt>
+      <dd>None. This app sets no cookies and has no accounts, analytics or tracking.</dd>
+      <dt>Local storage</dt>
+      <dd>
+        One item, <code>theme</code>, saved only when you press the theme button so your choice
+        survives a reload. <span id="privacy-status"></span>
+        <button id="privacy-forget" type="button" class="btn secondary small">Forget my theme choice</button>
+      </dd>
+      <dt>Your image</dt>
+      <dd>Sent to this server only when you generate a preview or a download, processed in memory
+        for that request and never written to disk.</dd>
+      <dt>Third parties</dt>
+      <dd>None. All scripts and assets are served from this server; nothing is loaded from a CDN.</dd>
+      <dt>Server logs</dt>
+      <dd>Like any web server, the operator's server may log request metadata such as IP addresses
+        for operation and security.</dd>
+    </dl>
+    <div class="step-actions">
+      <button id="privacy-close" type="button" class="btn primary">Close</button>
+    </div>
+  </dialog>
 
   <script type="module" src="/static/app.js"></script>
 </body>
