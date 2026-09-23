@@ -13,7 +13,6 @@ const state = {
   units: "metric",   // "metric" | "imperial"
   version: "0.00",
   previewGenerated: false,
-  previewStale: false,      // parameters changed since the last preview
   originalFileName: "",
 };
 
@@ -39,8 +38,6 @@ const legendBar      = document.getElementById("legend-bar");
 
 const btnNext1    = document.getElementById("btn-next-1");
 const btnBack2    = document.getElementById("btn-back-2");
-const btnGenerate = document.getElementById("btn-generate");
-const btnBack3    = document.getElementById("btn-back-3");
 const btnDlStl    = document.getElementById("btn-dl-stl");
 const btnDlGcode  = document.getElementById("btn-dl-gcode");
 
@@ -153,6 +150,7 @@ function updatePreview() {
   }
 
   ctx.putImageData(out, 0, 0);
+  state.previewGenerated = false;   // the carve preview no longer matches the image
 }
 
 // ── Unit system ───────────────────────────────────────────────────────────
@@ -250,6 +248,7 @@ function collectParams() {
 let renderer, scene, camera, controls, woodGroup, toolPath, viewerRaf = 0;
 let topGeo, topColBase, topColTint;   // carved surface geometry + plain / unreachable-tinted colours
 let gridDim = 0;
+let viewDims = "";
 
 function cssColor(name) {
   return new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue(name).trim());
@@ -547,17 +546,23 @@ function buildWoodMesh(heightmap, pathHeightmap, leftover, toolpath, rows, cols,
   addGrid(maxDim);
 
   // Camera at +Z, centered in X → screen right = +X, image orientation matches photo
-  camera.position.set(0, TH + maxDim * 1.0, Dz * 0.9);
-  controls.target.set(0, TH * 0.3, 0);
+  // Frame the block only when its dimensions change, so live updates don't yank the camera
+  const dims = `${W}|${Dz}|${TH}`;
+  if (dims !== viewDims) {
+    camera.position.set(0, TH + maxDim * 1.0, Dz * 0.9);
+    controls.target.set(0, TH * 0.3, 0);
+    viewDims = dims;
+  }
   controls.update();
 }
 
 // ── API calls (JSON body — no part-size limit) ────────────────────────────
-async function apiPost(endpoint, params) {
+async function apiPost(endpoint, params, signal) {
   const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ image_data: previewCanvas.toDataURL("image/png"), params }),
+    signal,
   });
   if (!res.ok) {
     const text = await res.text();
@@ -566,20 +571,33 @@ async function apiPost(endpoint, params) {
   return res;
 }
 
+// Live preview: debounce edits, cancel the in-flight request when a newer one starts,
+// and keep the current mesh on screen until the new result arrives.
+let previewAbort = null, previewTimer = 0;
+function schedulePreviewGen(delay = 400) {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(generatePreview, delay);
+}
+
 async function generatePreview() {
+  if (!state.originalPixels) return;
   const p = collectParams();
-  state.params = p;
+  if (Object.values(p).some(v => typeof v === "number" && !Number.isFinite(v))) return;   // field mid-edit
+  previewAbort?.abort();
+  const ctrl = previewAbort = new AbortController();
   loadingOverlay.classList.remove("hidden");
-  btnGenerate.disabled = true;
 
   try {
-    const res  = await apiPost("/api/preview", p);
+    const res  = await apiPost("/api/preview", p, ctrl.signal);
     const data = await res.json();
+    if (ctrl.signal.aborted) return;
 
-    initViewer();
+    if (!renderer) initViewer();
     buildWoodMesh(data.heightmap, data.path_heightmap, data.leftover, data.toolpath, data.rows, data.cols, p);
+    state.params = p;
     state.previewGenerated = true;
-    state.previewStale = false;
+    btnDlStl.disabled = btnDlGcode.disabled = false;
+    exportInfo.classList.remove("error");
 
     const rasterLines   = data.raster_lines;
     const depthPasses   = data.passes;
@@ -605,10 +623,11 @@ async function generatePreview() {
       `Unreachable: <b>${data.unreachable_pct.toFixed(0)}%</b> (max ${fmt(data.leftover_max_mm)}) &nbsp;|&nbsp; ` +
       `Est: <b>~${timeLabel}</b>`;
   } catch (err) {
-    alert("Error generating preview:\n" + err.message);
+    if (err.name === "AbortError") return;
+    exportInfo.classList.add("error");
+    exportInfo.textContent = "Preview failed: " + err.message;
   } finally {
-    loadingOverlay.classList.add("hidden");
-    btnGenerate.disabled = false;
+    if (previewAbort === ctrl) { loadingOverlay.classList.add("hidden"); previewAbort = null; }
   }
 }
 
@@ -677,15 +696,12 @@ pStepMode.addEventListener("change", () => {
   rowStepPct.style.display = auto ? "none" : "";
 });
 
-btnNext1.addEventListener("click", () => showStep(2));
+function enterCarve() {
+  showStep(2);
+  if (!state.previewGenerated) generatePreview();
+}
+btnNext1.addEventListener("click", enterCarve);
 btnBack2.addEventListener("click", () => showStep(1));
-
-btnGenerate.addEventListener("click", async () => {
-  showStep(3);
-  await generatePreview();
-});
-
-btnBack3.addEventListener("click", () => showStep(2));
 
 ctrlToolPath.addEventListener("change", () => {
   if (toolPath) toolPath.visible = ctrlToolPath.checked;
@@ -694,10 +710,10 @@ ctrlLeftover.addEventListener("change", () => {
   if (topGeo) topGeo.setAttribute("color", new THREE.BufferAttribute(ctrlLeftover.checked ? topColTint : topColBase, 3));
 });
 
-// Any parameter edit makes the current preview stale; entering step 3 then re-plans
-document.querySelectorAll("#step-2 input, #step-2 select").forEach(el => {
-  el.addEventListener("input",  () => { state.previewStale = true; });
-  el.addEventListener("change", () => { state.previewStale = true; });
+// Any machining parameter edit re-plans the preview (debounced); viewer toggles are excluded
+document.querySelectorAll(".params-pane input, .params-pane select").forEach(el => {
+  el.addEventListener("input",  () => schedulePreviewGen());
+  el.addEventListener("change", () => schedulePreviewGen());
 });
 
 // e.g. "200x150mm_vbit60deg-3.175mm" — carve size and tool in the active unit system
@@ -754,11 +770,7 @@ document.querySelectorAll(".step-indicator").forEach(el => {
   el.addEventListener("click", () => {
     const n = parseInt(el.dataset.step);
     if (n === 1) { showStep(1); return; }
-    if (n === 2 && state.originalPixels)   { showStep(2); return; }
-    if (n === 3 && state.originalPixels) {
-      showStep(3);
-      if (!state.previewGenerated || state.previewStale) generatePreview();
-    }
+    if (n === 2 && state.originalPixels) enterCarve();
   });
 });
 

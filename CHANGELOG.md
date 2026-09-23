@@ -4,6 +4,16 @@ Per-version history. Feature overview lives in [README.md](README.md).
 
 ---
 
+## v0.29
+
+- **Live carve screen** — steps 2 and 3 are merged: machining parameters sit in a left pane and the 3D preview, path plan, stats and download buttons in a sticky right pane. Any parameter change re-plans automatically (400 ms debounce); a newer edit cancels the in-flight request. The current mesh stays on screen until the new result lands, the camera is re-framed only when the block dimensions change, and an "Updating…" pill replaces the blocking overlay
+- Preview errors (e.g. cut deeper than the stock while typing) show inline in the info line instead of an alert; fields mid-edit (empty) don't trigger a request
+- Image adjustments made after a preview invalidate it, so returning to the carve screen re-plans
+- Downloads are enabled once the first preview has been generated
+- **Version bumped to 0.29**
+
+---
+
 ## v0.28
 
 - **Privacy / ePrivacy compliance** — audit found no cookies anywhere (none set by the server, none by the client). Two things were tightened so no consent banner is required:
