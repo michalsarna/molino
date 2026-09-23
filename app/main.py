@@ -9,6 +9,7 @@ from PIL import UnidentifiedImageError
 from pydantic import BaseModel
 
 from app import __version__
+from app.finish import auto_step_over, ridge_height
 from app.gcode_generator import generate_gcode
 from app.image_processor import machined_surface, process_image_to_heightmap, tool_path_depths
 from app.params import CarveParams
@@ -38,6 +39,18 @@ def _load_heightmap(req: GenerateRequest, cols: int, rows: int) -> np.ndarray:
         raise HTTPException(status_code=400, detail="image_data is not a valid image")
 
 
+def _step_over(req: GenerateRequest, p: CarveParams) -> tuple[float, float]:
+    """Effective raster spacing and the target's steepest slope (needed for flat end mills)."""
+    slope = 0.0
+    if p.bit_type == "endmill":
+        hm = _load_heightmap(req, 400, max(10, int(400 * p.height_mm / p.width_mm)))
+        gy, gx = np.gradient(hm * p.cut_depth,
+                             p.height_mm / max(hm.shape[0] - 1, 1), p.width_mm / max(hm.shape[1] - 1, 1))
+        slope = float(np.hypot(gx, gy).max())
+    step = p.step_over if p.step_over_mode == "manual" else auto_step_over(p, slope)
+    return step, slope
+
+
 def _grid(width_mm: float, height_mm: float, step_mm: float, lo: int, hi: int) -> tuple[int, int]:
     cols = max(lo, min(hi, int(width_mm / step_mm)))
     rows = max(lo, min(hi, int(height_mm / step_mm)))
@@ -58,7 +71,8 @@ async def index():
 async def preview(req: GenerateRequest):
     p = req.params
     # Grid follows the real raster spacing (capped) so tool footprints and line density match the G-code
-    real_cols, real_rows = _grid(p.width_mm, p.height_mm, p.step_over, 10, GCODE_MAX)
+    step, slope = _step_over(req, p)
+    real_cols, real_rows = _grid(p.width_mm, p.height_mm, step, 10, GCODE_MAX)
     cols, rows = min(PREVIEW_MAX, real_cols), min(PREVIEW_MAX, real_rows)
 
     raw = _load_heightmap(req, cols, rows)
@@ -85,6 +99,8 @@ async def preview(req: GenerateRequest):
         "rows": rows,
         "cols": cols,
         "raster_lines": real_rows,
+        "step_over_mm": step,
+        "ridge_mm": ridge_height(p, step, slope),
         "passes": plan.passes,
         "estimate_min": estimate_min,
         "toolpath": preview_paths(plan),
@@ -106,7 +122,8 @@ async def download_stl(req: GenerateRequest):
 @app.post("/api/download/gcode")
 async def download_gcode(req: GenerateRequest):
     p = req.params
-    cols, rows = _grid(p.width_mm, p.height_mm, p.step_over, 10, GCODE_MAX)
+    step, _ = _step_over(req, p)
+    cols, rows = _grid(p.width_mm, p.height_mm, step, 10, GCODE_MAX)
     hm = _load_heightmap(req, cols, rows)
     return Response(
         content=generate_gcode(hm, p),

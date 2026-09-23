@@ -4,6 +4,15 @@ Per-version changelog. New functionality summary lives in [README.md](README.md)
 
 ---
 
+## v0.25
+
+- **Step over: Auto from finish** — new mode derives the raster spacing from the tool profile and a *Max ridge* (scallop) parameter: V-bit `2·h·tan(θ/2)`, ball nose `2·√(2Rh − h²)`, flat end mill `h / steepest slope` (capped at 80 % of the diameter). A 45° bit therefore gets tighter lines than a 60° bit and a ball nose far wider ones for the same finish — the plan, line count and run time now follow the tool on smooth surfaces where the tool-offset path alone is identical
+- **Ridge height reported** for manual spacing too, in the export info and the G-code header (`; Ridge height: … between passes for this tool`), so two tools on the same image never produce indistinguishable files
+- Preview returns `step_over_mm` and `ridge_mm`; in auto mode the Spacing field shows the derived value
+- **Version bumped to 0.25**
+
+---
+
 ## v0.24
 
 - **Descriptive G-code file name** — includes carve size and tool in the active unit system, e.g. `molino_v0.24_photo_200x150mm_vbit60deg-3.175mm.gcode` or `…_8x6in_ballnose-0.25in.gcode`
