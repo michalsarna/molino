@@ -266,7 +266,7 @@ def test_gcode_header_reports_ridge_for_manual_spacing():
     hm = np.full((3, 3), 0.5, dtype=np.float32)
     code = generate_gcode(hm, params(width_mm=10, height_mm=1))   # rows 0.5 mm apart, 60 deg V
     assert "Ridge height:   0.4330 mm" in code                     # (0.5/2) / tan(30 deg)
-    assert "— manual" in code
+    assert "— 25% of tool diameter" in code
 
 
 def test_gcode_changes_with_tool_size():

@@ -47,7 +47,8 @@ def _step_over(req: GenerateRequest, p: CarveParams) -> tuple[float, float]:
         gy, gx = np.gradient(hm * p.cut_depth,
                              p.height_mm / max(hm.shape[0] - 1, 1), p.width_mm / max(hm.shape[1] - 1, 1))
         slope = float(np.hypot(gx, gy).max())
-    step = p.step_over if p.step_over_mode == "manual" else auto_step_over(p, slope)
+    step = (p.bit_diameter * p.step_over_pct / 100 if p.step_over_mode == "percent"
+            else auto_step_over(p, slope))
     return step, slope
 
 

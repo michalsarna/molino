@@ -1,6 +1,14 @@
-# Feature history
+# Changelog
 
-Per-version changelog. New functionality summary lives in [README.md](README.md).
+Per-version history. Feature overview lives in [README.md](README.md).
+
+---
+
+## v0.26
+
+- **Step over as % of tool diameter** — spacing is now entered as a percentage of the bit diameter (default 25 %), so it scales with the tool automatically; *Auto from finish* remains available. The mm value it produces is shown in the export info and G-code header
+- `FEATURES.md` renamed to `CHANGELOG.md`
+- **Version bumped to 0.26**
 
 ---
 

@@ -158,13 +158,13 @@
           <label>
             Step over
             <select id="p-step-mode">
-              <option value="manual">Manual spacing</option>
+              <option value="percent">% of tool diameter</option>
               <option value="auto">Auto from finish</option>
             </select>
           </label>
-          <label title="Distance between raster lines. In auto mode it is derived from the tool profile and max ridge">
-            Spacing <span class="unit-label">(mm)</span>
-            <input type="number" id="p-step-over" value="0.25" min="0.001" step="any" data-unit="length" data-mm="0.25" />
+          <label id="row-step-pct" title="Distance between raster lines as a percentage of the tool diameter">
+            Spacing (% of &#8960;)
+            <input type="number" id="p-step-pct" value="25" min="1" max="100" step="any" />
           </label>
           <label id="row-max-ridge" style="display:none" title="Largest ridge (scallop) allowed between adjacent passes">
             Max ridge <span class="unit-label">(mm)</span>

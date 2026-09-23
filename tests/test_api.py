@@ -33,9 +33,11 @@ def test_preview_returns_grid_matching_aspect(png_b64):
                                           "params": {"width_mm": 200, "height_mm": 100}})
     assert r.status_code == 200
     body = r.json()
-    assert body["cols"] == 400 and body["rows"] == 400          # 200x100 mm / 0.25 mm, capped at 400
-    assert body["raster_lines"] == 400
-    n = 400 * 400
+    step = 3.175 * 0.25                                          # default: 25% of the 3.175 mm tool
+    cols, rows = int(200 / step), int(100 / step)
+    assert body["cols"] == cols and body["rows"] == rows
+    assert body["raster_lines"] == rows and body["step_over_mm"] == pytest.approx(step)
+    n = cols * rows
     assert len(body["heightmap"]) == len(body["path_heightmap"]) == len(body["leftover"]) == n
     assert 0 <= body["unreachable_pct"] <= 100 and body["leftover_max_mm"] >= 0
     assert body["estimate_min"] > 0 and body["passes"] >= 1 and body["raster_lines"] >= 10
@@ -76,7 +78,7 @@ def test_invalid_params_are_a_422(png_b64):
 
 
 def test_downloads_produce_files(png_b64):
-    common = {"image_data": png_b64, "params": {"width_mm": 30, "height_mm": 15, "step_over": 1.0}}
+    common = {"image_data": png_b64, "params": {"width_mm": 30, "height_mm": 15, "step_over_pct": 30}}
     stl = client.post("/api/download/stl", json=common)
     assert stl.status_code == 200 and stl.content[:6] == b"Molino"
     gc = client.post("/api/download/gcode", json=common)
