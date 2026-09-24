@@ -77,8 +77,19 @@ header {
   color: var(--muted);
   margin-top: 2px;
 }
-#theme-toggle {
+.lang-select {
   margin-left: auto;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+.lang-select:hover { border-color: var(--primary); }
+#theme-toggle {
   width: 32px; height: 32px;
   border-radius: 50%;
   border: 1px solid var(--border);
