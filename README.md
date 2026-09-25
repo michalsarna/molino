@@ -2,7 +2,7 @@
 
 > **Photo → CNC wood carving** — upload a photo, tune it, and get a G-code toolpath and STL model ready to carve.
 
-[![Live](https://img.shields.io/badge/version-0.31-amber)](https://github.com/michalsarna/molino)
+[![Live](https://img.shields.io/badge/version-0.32-amber)](https://github.com/michalsarna/molino)
 
 ## What it does
 
@@ -72,6 +72,27 @@ docker compose down             # stop
 | Feed rate | XY cutting speed in mm/min |
 | Plunge rate | Z plunge speed in mm/min |
 | Safe height | Z height for rapid moves between passes |
+
+## Deploying on a server
+
+- Put the container behind a reverse proxy that terminates **HTTPS** (Caddy, nginx, Traefik). Uvicorn is started with `--proxy-headers`, so the app sees the real scheme and adds `Strict-Transport-Security` when `X-Forwarded-Proto: https` arrives.
+- The app sets its own security headers: a strict `Content-Security-Policy` (inline scripts allowed by hash only, everything served from the app itself), `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Permissions-Policy`.
+- Request bodies over 25 MB and images over 40 megapixels are rejected (413 / 400) before any decoding, so a malicious upload can't exhaust memory. Consider a proxy-level rate limit as well if the server is reachable from the internet.
+- The container runs as an unprivileged user, has a `HEALTHCHECK` on `/api/info`, writes nothing to disk and needs no volumes.
+
+## Security scanning
+
+Free tooling runs on every push / PR and weekly (`.github/workflows/`):
+
+| Tool | Scope |
+|---|---|
+| **pip-audit** | Known CVEs in Python dependencies |
+| **Bandit** | Python static analysis |
+| **CodeQL** | Code scanning for Python and JavaScript (vendored Three.js excluded) |
+| **Gitleaks** | Secrets in the repository history |
+| **Hadolint** | Dockerfile best practices |
+| **Trivy** | OS and library CVEs in the built image; Dockerfile / compose misconfiguration report |
+| **Dependabot** | Update PRs for pip, Docker base image, GitHub Actions and the pinned Three.js version (`package.json` — a bump there is a reminder to re-vendor `app/static/vendor/three`) |
 
 ## Privacy
 

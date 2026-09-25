@@ -720,8 +720,8 @@ pBitType.addEventListener("change", () => {
 
 pStepMode.addEventListener("change", () => {
   const auto = pStepMode.value === "auto";
-  rowRidge.style.display   = auto ? "" : "none";
-  rowStepPct.style.display = auto ? "none" : "";
+  rowRidge.classList.toggle("hidden", !auto);
+  rowStepPct.classList.toggle("hidden", auto);
 });
 
 function enterCarve() {

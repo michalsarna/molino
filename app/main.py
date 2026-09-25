@@ -1,11 +1,14 @@
 import base64
 import binascii
+import hashlib
+import re
+from pathlib import Path
 
 import numpy as np
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, Response
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from PIL import UnidentifiedImageError
+from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel
 
 from app import __version__
@@ -19,6 +22,49 @@ from app.toolpath import plan_toolpath, preview_paths, quantise
 app = FastAPI(title="Molino", version=__version__)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
+INDEX_HTML    = Path("app/static/index.html")
+MAX_BODY      = 25 * 1024 * 1024   # bytes; a 1200 px PNG as base64 is a few MB
+MAX_IMAGE_B64 = 20 * 1024 * 1024   # characters of image_data
+
+
+def _inline_script_hashes(html: str) -> str:
+    """CSP hashes for the page's inline scripts (theme bootstrap, importmap), so no 'unsafe-inline'."""
+    bodies = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", html, re.S)
+    return " ".join(f"'sha256-{base64.b64encode(hashlib.sha256(b.encode()).digest()).decode()}'" for b in bodies)
+
+
+CSP = "; ".join([
+    "default-src 'self'",
+    f"script-src 'self' {_inline_script_hashes(INDEX_HTML.read_text(encoding='utf-8'))}",
+    "style-src 'self'",
+    "img-src 'self' data: blob:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+])
+
+SECURITY_HEADERS = {
+    "Content-Security-Policy": CSP,
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Cross-Origin-Opener-Policy": "same-origin",
+}
+
+
+@app.middleware("http")
+async def security(request: Request, call_next):
+    if request.method == "POST" and int(request.headers.get("content-length") or 0) > MAX_BODY:
+        return JSONResponse({"detail": "request body too large"}, status_code=413)
+    response = await call_next(request)
+    response.headers.update(SECURITY_HEADERS)
+    if request.headers.get("x-forwarded-proto", request.url.scheme) == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
 PREVIEW_MAX  = 400    # preview grid follows the real raster spacing up to this many cols/rows
 STL_RES      = 300    # max grid size for STL export
 STL_STEP_MM  = 0.5    # target STL grid spacing
@@ -31,11 +77,13 @@ class GenerateRequest(BaseModel):
 
 
 def _load_heightmap(req: GenerateRequest, cols: int, rows: int) -> np.ndarray:
+    if len(req.image_data) > MAX_IMAGE_B64:
+        raise HTTPException(status_code=413, detail="image too large")
     b64 = req.image_data.split(",", 1)[-1]
     try:
         raw = base64.b64decode(b64, validate=True)
         return process_image_to_heightmap(raw, cols, rows)
-    except (binascii.Error, ValueError, UnidentifiedImageError, OSError):
+    except (binascii.Error, ValueError, UnidentifiedImageError, OSError, Image.DecompressionBombError):
         raise HTTPException(status_code=400, detail="image_data is not a valid image")
 
 

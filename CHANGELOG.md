@@ -4,6 +4,17 @@ Per-version history. Feature overview lives in [README.md](README.md).
 
 ---
 
+## v0.32
+
+- **Security scanning (all free)** — GitHub Actions workflows: pip-audit + Bandit, Gitleaks, Hadolint + Trivy (image CVEs fail the build on fixed HIGH/CRITICAL; misconfiguration is report-only), and CodeQL for Python and JavaScript; Dependabot for pip, Docker, Actions and a pinned `package.json` that tracks Three.js advisories for the vendored copy
+- **Security headers** — strict `Content-Security-Policy` with the two inline scripts allowed by SHA-256 hash computed from `index.html` at startup (no `unsafe-inline`), `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`; HSTS when the request is forwarded as HTTPS
+- **Upload guards for a public server** — bodies over 25 MB → 413, images over 40 Mpx rejected before decoding (a decompression-bomb PNG is a 400, not an OOM)
+- **Container hardening** — runs as an unprivileged user, `HEALTHCHECK` on `/api/info`, uvicorn started with `--proxy-headers`
+- README: deployment notes and scanner overview
+- **Version bumped to 0.32**
+
+---
+
 ## v0.31
 
 - **Step bar fixed** — the v0.30 translation wrapper made the badge styling apply to the label text, squeezing it into a 20 px circle. Badge and label now have their own classes; labels no longer wrap, the active badge uses the theme colours, and "done" steps show an outlined amber badge instead of a hard-coded green

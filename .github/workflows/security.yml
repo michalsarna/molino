@@ -1,0 +1,65 @@
+name: security
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"   # Mondays 06:00 UTC — catches newly published CVEs
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: pip-audit + Bandit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt pip-audit bandit
+      - name: pip-audit — known CVEs in Python dependencies
+        run: pip-audit -r requirements.txt
+      - name: Bandit — Python static analysis
+        run: bandit -q -r app -c pyproject.toml
+
+  secrets:
+    name: Gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  container:
+    name: Hadolint + Trivy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Hadolint — Dockerfile best practices
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+      - name: Build image
+        run: docker build -t molino:scan .
+      - name: Trivy — OS and library CVEs in the image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: molino:scan
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+      - name: Trivy — Dockerfile / compose misconfiguration (report only)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: .
+          format: table
+          exit-code: "0"
+          severity: CRITICAL,HIGH

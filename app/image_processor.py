@@ -6,6 +6,10 @@ from PIL import Image
 
 from app.params import CarveParams
 
+# ~6300x6300; the frontend already downsizes to 1200 px. Checked before decoding, so a
+# decompression-bomb PNG is rejected cheaply; Pillow's own (larger) limit stays as a backstop.
+MAX_IMAGE_PIXELS = 40_000_000
+
 
 # ── Tool profiles ─────────────────────────────────────────────────────────
 # k(d) = height of the cutter surface above its lowest point at horizontal distance d
@@ -102,6 +106,9 @@ def process_image_to_heightmap(image_bytes: bytes, cols: int, rows: int) -> np.n
     Grayscale image -> float32 heightmap in [0, 1]: 0 = no cut (white), 1 = max cut (black).
     Rows are flipped so image top maps to high Y (standard top-down CNC view).
     """
-    img = Image.open(io.BytesIO(image_bytes)).convert("L").resize((cols, rows), Image.LANCZOS)
+    img = Image.open(io.BytesIO(image_bytes))
+    if img.width * img.height > MAX_IMAGE_PIXELS:      # header is parsed lazily: reject before decoding
+        raise ValueError("image has too many pixels")
+    img = img.convert("L").resize((cols, rows), Image.LANCZOS)
     arr = np.asarray(img, dtype=np.float32) / 255.0
     return np.ascontiguousarray((1.0 - arr)[::-1, :])
