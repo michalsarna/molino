@@ -24,19 +24,24 @@
   <header>
     <div class="logo">&#9658; molino</div>
     <div class="version"></div>
-    <button id="theme-toggle" type="button" title="Switch light / dark theme" aria-label="Switch theme"></button>
+    <select id="lang-select" class="lang-select" data-i18n-title="lang.label" aria-label="Language">
+      <option value="en">English</option>
+      <option value="pl">Polski</option>
+      <option value="de">Deutsch</option>
+    </select>
+    <button id="theme-toggle" type="button" data-i18n-title="theme.title" aria-label="Switch theme"></button>
   </header>
 
   <nav class="steps-nav">
-    <div class="step-indicator active" data-step="1"><span>1</span> Image</div>
-    <div class="step-indicator" data-step="2"><span>2</span> Carve &amp; Export</div>
+    <div class="step-indicator active" data-step="1"><span>1</span> <span data-i18n="nav.image">Image</span></div>
+    <div class="step-indicator" data-step="2"><span>2</span> <span data-i18n="nav.carve">Carve &amp; Export</span></div>
   </nav>
 
   <!-- ── STEP 1: Upload & Adjust ─────────────────────────────────── -->
   <section id="step-1" class="step active">
     <div class="step-inner">
-      <h2>Upload &amp; Adjust Image</h2>
-      <p class="hint">
+      <h2 data-i18n="step1.title">Upload &amp; Adjust Image</h2>
+      <p class="hint" data-i18n="step1.hint">
         Upload any photo. Adjust brightness, contrast, and color flip.
         Dark areas become deep cuts; light areas remain uncut. Drag the handles on the
         depth bar to choose which gray levels count as "no cut" and "max cut".
@@ -48,59 +53,57 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
           </svg>
-          <span>Drop image here or <u>click to browse</u></span>
+          <span data-i18n-html="drop.label">Drop image here or <u>click to browse</u></span>
         </div>
       </div>
 
       <div id="preview-area" class="preview-area hidden">
         <div class="canvas-wrap">
           <canvas id="preview-canvas"></canvas>
-          <div class="canvas-label">Preview (B&amp;W depth map)</div>
+          <div class="canvas-label" data-i18n="canvas.label">Preview (B&amp;W depth map)</div>
         </div>
         <div class="adjustments">
           <label>
-            Brightness
+            <span data-i18n="adj.brightness">Brightness</span>
             <input type="range" id="ctrl-brightness" min="-100" max="100" value="0" />
             <span id="val-brightness">0</span>
           </label>
           <label>
-            Contrast
+            <span data-i18n="adj.contrast">Contrast</span>
             <input type="range" id="ctrl-contrast" min="-100" max="100" value="0" />
             <span id="val-contrast">0</span>
           </label>
           <label class="toggle-label">
-            Invert colors
+            <span data-i18n="adj.invert">Invert colors</span>
             <input type="checkbox" id="ctrl-invert" />
             <span class="toggle"></span>
           </label>
           <label class="toggle-label">
-            Flip horizontal
+            <span data-i18n="adj.flipH">Flip horizontal</span>
             <input type="checkbox" id="ctrl-flip-h" />
             <span class="toggle"></span>
           </label>
           <label class="toggle-label">
-            Flip vertical
+            <span data-i18n="adj.flipV">Flip vertical</span>
             <input type="checkbox" id="ctrl-flip-v" />
             <span class="toggle"></span>
           </label>
           <div class="depth-legend">
             <div class="legend-bar-wrap">
               <div class="legend-bar" id="legend-bar"></div>
-              <input type="range" class="legend-range" id="ctrl-nocut"  min="0" max="255" value="0"   title="No-cut level" />
-              <input type="range" class="legend-range" id="ctrl-maxcut" min="0" max="255" value="255" title="Max-cut level" />
+              <input type="range" class="legend-range" id="ctrl-nocut"  min="0" max="255" value="0"   data-i18n-title="adj.nocutTitle" />
+              <input type="range" class="legend-range" id="ctrl-maxcut" min="0" max="255" value="255" data-i18n-title="adj.maxcutTitle" />
             </div>
             <div class="legend-labels">
-              <span>No cut <b id="val-nocut">&ge; 255</b></span>
-              <span>Max cut <b id="val-maxcut">&le; 0</b></span>
+              <span><span data-i18n="adj.nocut">No cut</span> <b id="val-nocut">&ge; 255</b></span>
+              <span><span data-i18n="adj.maxcut">Max cut</span> <b id="val-maxcut">&le; 0</b></span>
             </div>
           </div>
         </div>
       </div>
 
       <div class="step-actions">
-        <button id="btn-next-1" class="btn primary" disabled>
-          Next: Carve →
-        </button>
+        <button id="btn-next-1" class="btn primary" disabled data-i18n="btn.next">Next: Carve →</button>
       </div>
     </div>
   </section>
@@ -108,120 +111,120 @@
   <!-- ── STEP 2: Parameters + live 3D preview + export ───────────── -->
   <section id="step-2" class="step">
     <div class="step-inner wide">
-      <h2>Carve &amp; Export</h2>
-      <p class="hint">Change any parameter — the 3D preview, path plan and estimate update automatically.</p>
+      <h2 data-i18n="step2.title">Carve &amp; Export</h2>
+      <p class="hint" data-i18n="step2.hint">Change any parameter — the 3D preview, path plan and estimate update automatically.</p>
 
       <div class="carve-layout">
       <aside class="params-pane">
       <div class="units-bar">
-        <span>Unit system:</span>
-        <label><input type="radio" name="units" value="metric" checked /> Metric (mm)</label>
-        <label><input type="radio" name="units" value="imperial" /> Imperial (in)</label>
+        <span data-i18n="units.label">Unit system:</span>
+        <label><input type="radio" name="units" value="metric" checked /> <span data-i18n="units.metric">Metric (mm)</span></label>
+        <label><input type="radio" name="units" value="imperial" /> <span data-i18n="units.imperial">Imperial (in)</span></label>
       </div>
 
       <div class="params-grid">
 
         <fieldset>
-          <legend>Physical Size</legend>
+          <legend data-i18n="fs.size">Physical Size</legend>
           <label>
-            Width <span class="unit-label">(mm)</span>
+            <span data-i18n="p.width">Width</span> <span class="unit-label">(mm)</span>
             <input type="number" id="p-width" value="200" min="0.01" step="any" data-unit="length" data-mm="200" />
           </label>
           <label>
-            Height <span class="unit-label">(mm)</span> <em>auto</em>
+            <span data-i18n="p.height">Height</span> <span class="unit-label">(mm)</span> <em data-i18n="p.auto">auto</em>
             <input type="number" id="p-height" readonly tabindex="-1" data-unit="length" />
           </label>
         </fieldset>
 
         <fieldset>
-          <legend>Cutting Tool</legend>
+          <legend data-i18n="fs.tool">Cutting Tool</legend>
           <label>
-            Bit type
+            <span data-i18n="p.bitType">Bit type</span>
             <select id="p-bit-type">
-              <option value="vbit">V-Bit</option>
-              <option value="endmill">End Mill (flat)</option>
-              <option value="ballnose">Ball Nose</option>
+              <option value="vbit" data-i18n="bit.vbit">V-Bit</option>
+              <option value="endmill" data-i18n="bit.endmill">End Mill (flat)</option>
+              <option value="ballnose" data-i18n="bit.ballnose">Ball Nose</option>
             </select>
           </label>
           <label>
-            Diameter <span class="unit-label">(mm)</span>
+            <span data-i18n="p.diameter">Diameter</span> <span class="unit-label">(mm)</span>
             <input type="number" id="p-bit-dia" value="3.175" min="0.001" step="any" data-unit="length" data-mm="3.175" />
           </label>
           <label id="row-tip-angle">
-            Tip angle (°)
+            <span data-i18n="p.tipAngle">Tip angle (°)</span>
             <input type="number" id="p-tip-angle" value="60" min="5" max="175" step="1" />
           </label>
         </fieldset>
 
         <fieldset>
-          <legend>Cutting Parameters</legend>
+          <legend data-i18n="fs.cutting">Cutting Parameters</legend>
           <label>
-            Max cut depth <span class="unit-label">(mm)</span>
+            <span data-i18n="p.cutDepth">Max cut depth</span> <span class="unit-label">(mm)</span>
             <input type="number" id="p-cut-depth" value="10" min="0.001" step="any" data-unit="length" data-mm="10" />
           </label>
           <label>
-            Wood thickness <span class="unit-label">(mm)</span>
+            <span data-i18n="p.woodThick">Wood thickness</span> <span class="unit-label">(mm)</span>
             <input type="number" id="p-wood-thick" value="18.0" min="0.001" step="any" data-unit="length" data-mm="18.0" />
           </label>
           <label>
-            Step over
+            <span data-i18n="p.stepOver">Step over</span>
             <select id="p-step-mode">
-              <option value="percent">% of tool diameter</option>
-              <option value="auto">Auto from finish</option>
+              <option value="percent" data-i18n="step.percent">% of tool diameter</option>
+              <option value="auto" data-i18n="step.auto">Auto from finish</option>
             </select>
           </label>
-          <label id="row-step-pct" title="Distance between raster lines as a percentage of the tool diameter">
-            Spacing (% of &#8960;)
+          <label id="row-step-pct" data-i18n-title="p.spacingTitle">
+            <span data-i18n="p.spacing">Spacing (% of &#8960;)</span>
             <input type="number" id="p-step-pct" value="25" min="1" max="100" step="any" />
           </label>
-          <label id="row-max-ridge" style="display:none" title="Largest ridge (scallop) allowed between adjacent passes">
-            Max ridge <span class="unit-label">(mm)</span>
+          <label id="row-max-ridge" style="display:none" data-i18n-title="p.maxRidgeTitle">
+            <span data-i18n="p.maxRidge">Max ridge</span> <span class="unit-label">(mm)</span>
             <input type="number" id="p-max-ridge" value="0.1" min="0.001" step="any" data-unit="length" data-mm="0.1" />
           </label>
           <label>
-            Depth per pass <span class="unit-label">(mm)</span>
+            <span data-i18n="p.depthPerPass">Depth per pass</span> <span class="unit-label">(mm)</span>
             <input type="number" id="p-depth-per-pass" value="1" min="0.01" step="any" data-unit="length" data-mm="1" />
           </label>
         </fieldset>
 
         <fieldset>
-          <legend>Machine Parameters</legend>
+          <legend data-i18n="fs.machine">Machine Parameters</legend>
           <label>
-            Spindle speed (RPM)
+            <span data-i18n="p.spindle">Spindle speed (RPM)</span>
             <input type="number" id="p-spindle" value="12000" min="100" max="60000" step="100" />
           </label>
           <label>
-            Feed rate <span class="unit-label">(mm/min)</span>
+            <span data-i18n="p.feed">Feed rate</span> <span class="unit-label">(mm/min)</span>
             <input type="number" id="p-feed" value="1000" min="0.01" step="any" data-unit="rate" data-mm="1000" />
           </label>
           <label>
-            Plunge rate <span class="unit-label">(mm/min)</span>
+            <span data-i18n="p.plunge">Plunge rate</span> <span class="unit-label">(mm/min)</span>
             <input type="number" id="p-plunge" value="300" min="0.01" step="any" data-unit="rate" data-mm="300" />
           </label>
           <label>
-            Rapid rate <span class="unit-label">(mm/min)</span>
+            <span data-i18n="p.rapid">Rapid rate</span> <span class="unit-label">(mm/min)</span>
             <input type="number" id="p-rapid" value="3000" min="0.01" step="any" data-unit="rate" data-mm="3000" />
           </label>
           <label>
-            Safe height <span class="unit-label">(mm)</span>
+            <span data-i18n="p.safeH">Safe height</span> <span class="unit-label">(mm)</span>
             <input type="number" id="p-safe-h" value="5.0" min="0.001" step="any" data-unit="length" data-mm="5.0" />
           </label>
-          <label title="Clearance used for short moves inside the carve area; safe height is used at start and end">
-            Retract height <span class="unit-label">(mm)</span>
+          <label data-i18n-title="p.retractTitle">
+            <span data-i18n="p.retract">Retract height</span> <span class="unit-label">(mm)</span>
             <input type="number" id="p-retract" value="1.0" min="0.001" step="any" data-unit="length" data-mm="1.0" />
           </label>
           <div class="origin-picker">
-            <span>Work origin (X0 Y0)</span>
+            <span data-i18n="p.origin">Work origin (X0 Y0)</span>
             <div class="origin-grid" role="radiogroup" aria-label="Work origin">
-              <label title="Top left"><input type="radio" name="origin" value="top-left" /><span></span></label>
-              <label title="Top center"><input type="radio" name="origin" value="top-center" /><span></span></label>
-              <label title="Top right"><input type="radio" name="origin" value="top-right" /><span></span></label>
-              <label title="Middle left"><input type="radio" name="origin" value="middle-left" /><span></span></label>
-              <label title="Center"><input type="radio" name="origin" value="middle-center" /><span></span></label>
-              <label title="Middle right"><input type="radio" name="origin" value="middle-right" /><span></span></label>
-              <label title="Bottom left"><input type="radio" name="origin" value="bottom-left" checked /><span></span></label>
-              <label title="Bottom center"><input type="radio" name="origin" value="bottom-center" /><span></span></label>
-              <label title="Bottom right"><input type="radio" name="origin" value="bottom-right" /><span></span></label>
+              <label data-i18n-title="origin.top-left"><input type="radio" name="origin" value="top-left" /><span></span></label>
+              <label data-i18n-title="origin.top-center"><input type="radio" name="origin" value="top-center" /><span></span></label>
+              <label data-i18n-title="origin.top-right"><input type="radio" name="origin" value="top-right" /><span></span></label>
+              <label data-i18n-title="origin.middle-left"><input type="radio" name="origin" value="middle-left" /><span></span></label>
+              <label data-i18n-title="origin.middle-center"><input type="radio" name="origin" value="middle-center" /><span></span></label>
+              <label data-i18n-title="origin.middle-right"><input type="radio" name="origin" value="middle-right" /><span></span></label>
+              <label data-i18n-title="origin.bottom-left"><input type="radio" name="origin" value="bottom-left" checked /><span></span></label>
+              <label data-i18n-title="origin.bottom-center"><input type="radio" name="origin" value="bottom-center" /><span></span></label>
+              <label data-i18n-title="origin.bottom-right"><input type="radio" name="origin" value="bottom-right" /><span></span></label>
             </div>
           </div>
         </fieldset>
@@ -229,7 +232,7 @@
       </div>
 
       <div class="step-actions left">
-        <button id="btn-back-2" class="btn secondary">← Back to image</button>
+        <button id="btn-back-2" class="btn secondary" data-i18n="btn.back">← Back to image</button>
       </div>
       </aside>
 
@@ -237,32 +240,32 @@
       <div id="viewer-wrap">
         <div id="viewer"></div>
         <div class="viewer-toggles">
-          <label class="toggle-label viewer-toggle" title="Tint the surface where the target is deeper than this tool can reach">
-            Unreachable material <span class="swatch left"></span>
+          <label class="toggle-label viewer-toggle" data-i18n-title="viewer.leftoverTitle">
+            <span data-i18n="viewer.leftover">Unreachable material</span> <span class="swatch left"></span>
             <input type="checkbox" id="ctrl-leftover" checked />
             <span class="toggle"></span>
           </label>
-          <label class="toggle-label viewer-toggle" title="Planned tool path: red = cutting, blue = link through a finished groove, grey = rapid">
-            Tool path
-            <span class="swatch cut"></span>cut
-            <span class="swatch link"></span>link
-            <span class="swatch hop"></span>rapid
+          <label class="toggle-label viewer-toggle" data-i18n-title="viewer.toolpathTitle">
+            <span data-i18n="viewer.toolpath">Tool path</span>
+            <span class="swatch cut"></span><span data-i18n="viewer.cut">cut</span>
+            <span class="swatch link"></span><span data-i18n="viewer.link">link</span>
+            <span class="swatch hop"></span><span data-i18n="viewer.hop">rapid</span>
             <input type="checkbox" id="ctrl-toolpath" />
             <span class="toggle"></span>
           </label>
         </div>
-        <div id="viewer-hint">Drag to rotate · Scroll to zoom · Right-drag to pan</div>
+        <div id="viewer-hint" data-i18n="viewer.hint">Drag to rotate · Scroll to zoom · Right-drag to pan</div>
         <div id="loading-overlay" class="hidden">
           <div class="spinner"></div>
-          <span>Updating…</span>
+          <span data-i18n="viewer.updating">Updating…</span>
         </div>
       </div>
 
       <div class="export-row">
         <div class="export-info" id="export-info">Adjust the parameters on the left; the preview appears here.</div>
         <div class="export-btns">
-          <button id="btn-dl-stl" class="btn primary" disabled>&#8595; Download STL</button>
-          <button id="btn-dl-gcode" class="btn primary" disabled>&#8595; Download G-code</button>
+          <button id="btn-dl-stl" class="btn primary" disabled data-i18n="btn.stl">&#8595; Download STL</button>
+          <button id="btn-dl-gcode" class="btn primary" disabled data-i18n="btn.gcode">&#8595; Download G-code</button>
         </div>
       </div>
       </div><!-- /viewer-pane -->
@@ -271,32 +274,30 @@
   </section>
 
   <footer>
-    <span>No cookies. Images are processed in memory and never stored.</span>
-    <button id="privacy-open" type="button" class="link">Privacy &amp; browser storage</button>
+    <span data-i18n="footer.note">No cookies. Images are processed in memory and never stored.</span>
+    <button id="privacy-open" type="button" class="link" data-i18n="footer.privacy">Privacy &amp; browser storage</button>
   </footer>
 
   <dialog id="privacy">
-    <h3>Privacy &amp; browser storage</h3>
+    <h3 data-i18n="privacy.title">Privacy &amp; browser storage</h3>
     <dl>
-      <dt>Cookies</dt>
-      <dd>None. This app sets no cookies and has no accounts, analytics or tracking.</dd>
-      <dt>Local storage</dt>
+      <dt data-i18n="privacy.cookies">Cookies</dt>
+      <dd data-i18n="privacy.cookiesText">None. This app sets no cookies and has no accounts, analytics or tracking.</dd>
+      <dt data-i18n="privacy.storage">Local storage</dt>
       <dd>
-        One item, <code>theme</code>, saved only when you press the theme button so your choice
-        survives a reload. <span id="privacy-status"></span>
-        <button id="privacy-forget" type="button" class="btn secondary small">Forget my theme choice</button>
+        <span data-i18n-html="privacy.storageText">Two items, <code>theme</code> and <code>lang</code>, saved only when you press the theme button or pick a language, so your choice survives a reload.</span>
+        <span id="privacy-status"></span>
+        <button id="privacy-forget" type="button" class="btn secondary small" data-i18n="privacy.forget">Forget my choices</button>
       </dd>
-      <dt>Your image</dt>
-      <dd>Sent to this server only when you generate a preview or a download, processed in memory
-        for that request and never written to disk.</dd>
-      <dt>Third parties</dt>
-      <dd>None. All scripts and assets are served from this server; nothing is loaded from a CDN.</dd>
-      <dt>Server logs</dt>
-      <dd>Like any web server, the operator's server may log request metadata such as IP addresses
-        for operation and security.</dd>
+      <dt data-i18n="privacy.image">Your image</dt>
+      <dd data-i18n="privacy.imageText">Sent to this server only when you generate a preview or a download, processed in memory for that request and never written to disk.</dd>
+      <dt data-i18n="privacy.third">Third parties</dt>
+      <dd data-i18n="privacy.thirdText">None. All scripts and assets are served from this server; nothing is loaded from a CDN.</dd>
+      <dt data-i18n="privacy.logs">Server logs</dt>
+      <dd data-i18n="privacy.logsText">Like any web server, the operator's server may log request metadata such as IP addresses for operation and security.</dd>
     </dl>
     <div class="step-actions">
-      <button id="privacy-close" type="button" class="btn primary">Close</button>
+      <button id="privacy-close" type="button" class="btn primary" data-i18n="privacy.close">Close</button>
     </div>
   </dialog>
 

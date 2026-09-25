@@ -4,6 +4,14 @@ Per-version history. Feature overview lives in [README.md](README.md).
 
 ---
 
+## v0.30
+
+- **Multilanguage UI** — English, Polish and German, chosen from a selector in the header. The browser language is used by default; a choice is remembered (`lang` in local storage) only when you pick one, and the privacy notice and "forget" button cover it. All static text, tooltips, the stats line, origin names, tool labels and error messages are translated; the G-code header stays in English as the technical lingua franca
+- Dictionaries are plain JSON in `app/static/i18n/` — add a file and an `<option>` to add a language. A test checks key parity and placeholders across languages and that the page and script reference only known keys
+- **Version bumped to 0.30**
+
+---
+
 ## v0.29
 
 - **Live carve screen** — steps 2 and 3 are merged: machining parameters sit in a left pane and the 3D preview, path plan, stats and download buttons in a sticky right pane. Any parameter change re-plans automatically (400 ms debounce); a newer edit cancels the in-flight request. The current mesh stays on screen until the new result lands, the camera is re-framed only when the block dimensions change, and an "Updating…" pill replaces the blocking overlay

@@ -53,6 +53,32 @@ const loadingOverlay = document.getElementById("loading-overlay");
 const exportInfo     = document.getElementById("export-info");
 const ctrlToolPath   = document.getElementById("ctrl-toolpath");
 const ctrlLeftover   = document.getElementById("ctrl-leftover");
+const langSelect     = document.getElementById("lang-select");
+
+// ── i18n ───────────────────────────────────────────────────────────────────
+// Dictionaries live in /static/i18n/<code>.json; static text carries data-i18n /
+// data-i18n-html / data-i18n-title attributes, JS-built strings go through t().
+const LANGS = { en: "English", pl: "Polski", de: "Deutsch" };
+let lang = "en", dict = {}, dictEn = {};
+const t = (key, vars = {}) =>
+  (dict[key] ?? dictEn[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
+const browserLang = () => (navigator.language || "en").slice(0, 2).toLowerCase();
+
+async function loadLanguage(code, persist) {
+  lang = LANGS[code] ? code : "en";
+  if (!Object.keys(dictEn).length) dictEn = await (await fetch("/static/i18n/en.json")).json();
+  dict = lang === "en" ? dictEn : await (await fetch(`/static/i18n/${lang}.json`)).json();
+  if (persist) localStorage.setItem("lang", lang);
+  document.documentElement.lang = lang;
+  document.title = t("app.title");
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+  document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  langSelect.value = lang;
+  if (lastPreview) renderExportInfo(lastPreview.data, lastPreview.p);
+  else if (!exportInfo.classList.contains("error")) exportInfo.textContent = t("export.placeholder");
+  updatePrivacyStatus();
+}
 
 // ── Step navigation ───────────────────────────────────────────────────────
 function showStep(n) {
@@ -599,43 +625,45 @@ async function generatePreview() {
     btnDlStl.disabled = btnDlGcode.disabled = false;
     exportInfo.classList.remove("error");
 
-    const rasterLines   = data.raster_lines;
-    const depthPasses   = data.passes;
-    const estHours      = Math.floor(data.estimate_min / 60);
-    const estMins       = Math.round(data.estimate_min % 60);
-    const timeLabel     = estHours > 0
-      ? `${estHours}h ${String(estMins).padStart(2, "0")}m`
-      : `${estMins}m`;
-    const u             = state.units === "imperial";
-    const fmt           = v => u ? (v / MM_PER_INCH).toFixed(3) + " in" : v.toFixed(1) + " mm";
-    const toolLabel     = { vbit:     `V-bit ${p.tip_angle}° / ⌀${fmt(p.bit_diameter)}`,
-                            endmill:  `End mill ⌀${fmt(p.bit_diameter)}`,
-                            ballnose: `Ball nose ⌀${fmt(p.bit_diameter)}` }[p.bit_type];
-
-    exportInfo.innerHTML =
-      `Size: <b>${fmt(p.width_mm)} × ${fmt(p.height_mm)}</b> &nbsp;|&nbsp; ` +
-      `Depth: <b>${fmt(p.cut_depth)}</b> &nbsp;|&nbsp; ` +
-      `Step: <b>${fmt(data.step_over_mm)}</b> (${p.step_over_mode === "percent" ? `${p.step_over_pct}% ⌀, ` : ""}ridge ${fmt(data.ridge_mm)}) &nbsp;|&nbsp; ` +
-      (depthPasses > 1 ? `${depthPasses} depth passes &nbsp;|&nbsp; ` : "") +
-      `${rasterLines} raster lines &nbsp;|&nbsp; ` +
-      `Tool: <b>${toolLabel}</b> &nbsp;|&nbsp; ` +
-      `Origin: <b>${p.origin.replace("-", " ")}</b> &nbsp;|&nbsp; ` +
-      `Unreachable: <b>${data.unreachable_pct.toFixed(0)}%</b> (max ${fmt(data.leftover_max_mm)}) &nbsp;|&nbsp; ` +
-      `Est: <b>~${timeLabel}</b>`;
+    lastPreview = { data, p };
+    renderExportInfo(data, p);
   } catch (err) {
     if (err.name === "AbortError") return;
     exportInfo.classList.add("error");
-    exportInfo.textContent = "Preview failed: " + err.message;
+    exportInfo.textContent = t("info.failed", { msg: err.message });
   } finally {
     if (previewAbort === ctrl) { loadingOverlay.classList.add("hidden"); previewAbort = null; }
   }
+}
+
+let lastPreview = null;
+function renderExportInfo(data, p) {
+  const u   = state.units === "imperial";
+  const fmt = v => u ? (v / MM_PER_INCH).toFixed(3) + " in" : v.toFixed(1) + " mm";
+  const h = Math.floor(data.estimate_min / 60), m = Math.round(data.estimate_min % 60);
+  const timeLabel = h > 0 ? t("time.hm", { h, m: String(m).padStart(2, "0") }) : t("time.m", { m });
+  const toolLabel = t(`tool.${p.bit_type}`, { angle: p.tip_angle, dia: fmt(p.bit_diameter) });
+  const pct = p.step_over_mode === "percent" ? `${p.step_over_pct}% ⌀, ` : "";
+
+  exportInfo.classList.remove("error");
+  exportInfo.innerHTML = [
+    `${t("info.size")}: <b>${fmt(p.width_mm)} × ${fmt(p.height_mm)}</b>`,
+    `${t("info.depth")}: <b>${fmt(p.cut_depth)}</b>`,
+    `${t("info.step")}: <b>${fmt(data.step_over_mm)}</b> (${pct}${t("info.ridge")} ${fmt(data.ridge_mm)})`,
+    data.passes > 1 ? t("info.passes", { n: data.passes }) : null,
+    t("info.lines", { n: data.raster_lines }),
+    `${t("info.tool")}: <b>${toolLabel}</b>`,
+    `${t("info.origin")}: <b>${t(`origin.${p.origin}`)}</b>`,
+    `${t("info.unreachable")}: <b>${data.unreachable_pct.toFixed(0)}%</b> (${t("info.max")} ${fmt(data.leftover_max_mm)})`,
+    `${t("info.est")}: <b>~${timeLabel}</b>`,
+  ].filter(Boolean).join(" &nbsp;|&nbsp; ");
 }
 
 async function downloadFile(endpoint, filename) {
   const btn = endpoint.includes("stl") ? btnDlStl : btnDlGcode;
   const origLabel = btn.textContent;
   btn.disabled = true;
-  btn.textContent = "Generating…";
+  btn.textContent = t("btn.generating");
 
   try {
     const res  = await apiPost(endpoint, state.params);
@@ -644,7 +672,7 @@ async function downloadFile(endpoint, filename) {
     Object.assign(document.createElement("a"), { href: url, download: filename }).click();
     URL.revokeObjectURL(url);
   } catch (err) {
-    alert("Download failed:\n" + err.message);
+    alert(t("dl.failed", { msg: err.message }));
   } finally {
     btn.disabled = false;
     btn.textContent = origLabel;
@@ -750,17 +778,24 @@ themeBtn.addEventListener("click", () =>
 // ── Privacy notice ─────────────────────────────────────────────────────────
 const privacyDialog = document.getElementById("privacy");
 function updatePrivacyStatus() {
-  const stored = localStorage.getItem("theme");
+  const items = ["theme", "lang"].filter(k => localStorage.getItem(k) !== null)
+                                 .map(k => `${k}="${localStorage.getItem(k)}"`);
   document.getElementById("privacy-status").textContent =
-    stored ? `Currently stored: "${stored}".` : "Nothing is stored right now.";
-  document.getElementById("privacy-forget").disabled = !stored;
+    items.length ? t("privacy.status.stored", { items: items.join(", ") }) : t("privacy.status.none");
+  document.getElementById("privacy-forget").disabled = !items.length;
 }
 document.getElementById("privacy-open").addEventListener("click", () => { updatePrivacyStatus(); privacyDialog.showModal(); });
 document.getElementById("privacy-close").addEventListener("click", () => privacyDialog.close());
 document.getElementById("privacy-forget").addEventListener("click", () => {
   localStorage.removeItem("theme");
+  localStorage.removeItem("lang");
   setTheme(systemTheme(), false);
+  loadLanguage(browserLang(), false);
 });
+
+// ── Language ───────────────────────────────────────────────────────────────
+langSelect.addEventListener("change", () => loadLanguage(langSelect.value, true));
+loadLanguage(localStorage.getItem("lang") || browserLang(), false);
 
 // ── Logo click → new session ───────────────────────────────────────────────
 document.querySelector(".logo").addEventListener("click", () => location.reload());
