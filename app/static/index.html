@@ -22,7 +22,7 @@
 </head>
 <body>
   <header>
-    <div class="logo">&#9658; molino</div>
+    <div class="logo"><img class="logo-icon" src="/static/favicon.svg" alt="" />molino</div>
     <div class="version"></div>
     <select id="lang-select" class="lang-select" data-i18n-title="lang.label" aria-label="Language">
       <option value="en">English</option>
@@ -33,8 +33,8 @@
   </header>
 
   <nav class="steps-nav">
-    <div class="step-indicator active" data-step="1"><span>1</span> <span data-i18n="nav.image">Image</span></div>
-    <div class="step-indicator" data-step="2"><span>2</span> <span data-i18n="nav.carve">Carve &amp; Export</span></div>
+    <div class="step-indicator active" data-step="1"><span class="step-num">1</span><span class="step-label" data-i18n="nav.image">Image</span></div>
+    <div class="step-indicator" data-step="2"><span class="step-num">2</span><span class="step-label" data-i18n="nav.carve">Carve &amp; Export</span></div>
   </nav>
 
   <!-- ── STEP 1: Upload & Adjust ─────────────────────────────────── -->
