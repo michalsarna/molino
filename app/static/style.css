@@ -64,6 +64,9 @@ header {
   z-index: 10;
 }
 .logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 18px;
   font-weight: 700;
   letter-spacing: .5px;
@@ -71,6 +74,7 @@ header {
   cursor: pointer;
   user-select: none;
 }
+.logo-icon { width: 24px; height: 24px; border-radius: 5px; }
 .logo:hover { color: var(--primary-h); }
 .version {
   font-size: 11px;
@@ -120,7 +124,8 @@ header {
   cursor: pointer;
   transition: color .2s;
 }
-.step-indicator span {
+.step-num {
+  flex: 0 0 20px;
   width: 20px; height: 20px;
   border-radius: 50%;
   background: var(--border);
@@ -128,19 +133,21 @@ header {
   font-size: 11px;
   font-weight: 700;
   display: flex; align-items: center; justify-content: center;
-  transition: background .2s, color .2s;
+  transition: background .2s, color .2s, box-shadow .2s;
 }
+.step-label { white-space: nowrap; }
 .step-indicator.active {
   color: var(--primary);
   border-bottom-color: var(--primary);
 }
-.step-indicator.active span {
+.step-indicator.active .step-num {
   background: var(--primary);
-  color: #000;
+  color: var(--bg);
 }
-.step-indicator.done span {
-  background: #3a6a3a;
-  color: #8fda8f;
+.step-indicator.done .step-num {
+  background: transparent;
+  color: var(--primary);
+  box-shadow: inset 0 0 0 1.5px var(--primary);
 }
 .step-indicator:not(.active):hover { color: var(--text); }
 

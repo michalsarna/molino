@@ -4,6 +4,14 @@ Per-version history. Feature overview lives in [README.md](README.md).
 
 ---
 
+## v0.31
+
+- **Step bar fixed** — the v0.30 translation wrapper made the badge styling apply to the label text, squeezing it into a 20 px circle. Badge and label now have their own classes; labels no longer wrap, the active badge uses the theme colours, and "done" steps show an outlined amber badge instead of a hard-coded green
+- **Logo icon** — the favicon (gantry + V-bit) replaces the ▶ glyph next to "molino"
+- **Version bumped to 0.31**
+
+---
+
 ## v0.30
 
 - **Multilanguage UI** — English, Polish and German, chosen from a selector in the header. The browser language is used by default; a choice is remembered (`lang` in local storage) only when you pick one, and the privacy notice and "forget" button cover it. All static text, tooltips, the stats line, origin names, tool labels and error messages are translated; the G-code header stays in English as the technical lingua franca
