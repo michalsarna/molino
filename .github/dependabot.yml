@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  # package.json only pins the vendored Three.js version so advisories are tracked;
+  # a bump PR here is a reminder to re-vendor app/static/vendor/three.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
