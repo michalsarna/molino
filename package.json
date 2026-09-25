@@ -3,6 +3,6 @@
   "private": true,
   "description": "Pins the version of Three.js vendored under app/static/vendor/three so Dependabot tracks its security advisories. Nothing is installed from npm at build or run time.",
   "dependencies": {
-    "three": "0.157.0"
+    "three": "0.186.0"
   }
 }

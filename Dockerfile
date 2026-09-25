@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 ARG BUILD_VERSION=0.32
 LABEL version="${BUILD_VERSION}" \
