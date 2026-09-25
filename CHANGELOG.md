@@ -4,6 +4,13 @@ Per-version history. Feature overview lives in [README.md](README.md).
 
 ---
 
+## v0.33
+
+- **Fix: stale tool path in the viewer** — since the live carve screen keeps one Three.js scene, each re-plan disposed the previous tool-path group but never removed it from the scene, so paths stacked up (visible after changing the physical size). The old group is now removed before the new one is added
+- **Version bumped to 0.33**
+
+---
+
 ## v0.32
 
 - **Security scanning (all free)** — GitHub Actions workflows: pip-audit + Bandit, Gitleaks, Hadolint + Trivy (image CVEs fail the build on fixed HIGH/CRITICAL; misconfiguration is report-only), and CodeQL for Python and JavaScript; Dependabot for pip, Docker, Actions and a pinned `package.json` that tracks Three.js advisories for the vendored copy

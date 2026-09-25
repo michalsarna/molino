@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 
-ARG BUILD_VERSION=0.32
+ARG BUILD_VERSION=0.33
 LABEL version="${BUILD_VERSION}" \
       maintainer="Molino"
 

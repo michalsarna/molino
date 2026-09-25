@@ -354,6 +354,7 @@ function buildWoodMesh(heightmap, pathHeightmap, leftover, toolpath, rows, cols,
     woodGroup = null;
   }
   if (toolPath) {
+    scene.remove(toolPath);   // the scene persists between re-plans, so the old group must go
     toolPath.traverse(o => { if (o.geometry) { o.geometry.dispose(); o.material.dispose(); } });
     toolPath = null;
   }
