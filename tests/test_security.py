@@ -26,7 +26,7 @@ def test_security_headers_on_pages_and_api():
 
 def test_csp_hashes_match_the_inline_scripts():
     html = main.INDEX_HTML.read_text(encoding="utf-8")
-    inline = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", html, re.S)
+    inline = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", html, flags=re.S | re.IGNORECASE)
     assert len(inline) == 2                                     # theme bootstrap + importmap
     csp = client.get("/").headers["content-security-policy"]
     for body in inline:
