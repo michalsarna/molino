@@ -4,6 +4,13 @@ Per-version history. Feature overview lives in [README.md](README.md).
 
 ---
 
+## v0.34
+
+- **Dependency refresh** — after the merged Dependabot PRs (FastAPI ≥ 0.141, uvicorn, Pillow ≥ 12.3, NumPy ≥ 2.5, pytest ≥ 9.1, `python:3.14-slim`, Actions on Node 24), this release closes the remaining gaps: uvicorn ≥ 0.54 and, above all, the **vendored Three.js is actually updated to r186 (0.186.1)** — Dependabot had bumped only the `package.json` pin while the served copy was still r157. Newer builds ship as `three.module.js` + `three.core.js`, both now vendored; the test that checks served assets covers the new file
+- **Version bumped to 0.34**
+
+---
+
 ## v0.33
 
 - **Fix: stale tool path in the viewer** — since the live carve screen keeps one Three.js scene, each re-plan disposed the previous tool-path group but never removed it from the scene, so paths stacked up (visible after changing the physical size). The old group is now removed before the new one is added

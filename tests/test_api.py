@@ -69,6 +69,7 @@ def test_no_cookies_and_no_third_party_assets():
         assert "set-cookie" not in {k.lower() for k in r.headers}
     assert "cdn.jsdelivr" not in page.text and 'src="http' not in page.text
     for path in ("/static/vendor/three/three.module.js",
+                 "/static/vendor/three/three.core.js",              # r170+ splits the build in two
                  "/static/vendor/three/addons/controls/OrbitControls.js",
                  "/static/vendor/three/LICENSE"):
         assert client.get(path).status_code == 200, path
