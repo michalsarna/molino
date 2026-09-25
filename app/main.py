@@ -29,7 +29,7 @@ MAX_IMAGE_B64 = 20 * 1024 * 1024   # characters of image_data
 
 def _inline_script_hashes(html: str) -> str:
     """CSP hashes for the page's inline scripts (theme bootstrap, importmap), so no 'unsafe-inline'."""
-    bodies = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", html, re.S)
+    bodies = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", html, re.S | re.IGNORECASE)
     return " ".join(f"'sha256-{base64.b64encode(hashlib.sha256(b.encode()).digest()).decode()}'" for b in bodies)
 
 
