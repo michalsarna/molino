@@ -7,7 +7,10 @@ LABEL version="${BUILD_VERSION}" \
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install the app's dependencies, then drop the installer tooling: pip (with its vendored
+# msgpack) and setuptools are not needed at runtime and only add CVE surface to the image.
+RUN pip install --no-cache-dir -r requirements.txt \
+ && pip uninstall -y pip setuptools wheel
 
 COPY . .
 

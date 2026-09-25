@@ -7,6 +7,7 @@ Per-version history. Feature overview lives in [README.md](README.md).
 ## v0.34
 
 - **Dependency refresh** — after the merged Dependabot PRs (FastAPI ≥ 0.141, uvicorn, Pillow ≥ 12.3, NumPy ≥ 2.5, pytest ≥ 9.1, `python:3.14-slim`, Actions on Node 24), this release closes the remaining gaps: uvicorn ≥ 0.54 and, above all, the **vendored Three.js is actually updated to r186 (0.186.1)** — Dependabot had bumped only the `package.json` pin while the served copy was still r157. Newer builds ship as `three.module.js` + `three.core.js`, both now vendored; the test that checks served assets covers the new file
+- **Leaner runtime image** — pip, setuptools and wheel are removed after installing the requirements; they aren't needed at runtime and were the only source of Trivy's HIGH findings (`setuptools` CVE-2025-47273, pip's vendored `msgpack` GHSA-6v7p-g79w-8964). Runtime user has a fixed numeric UID/GID; Trivy CLI pinned to v0.74.0
 - **Version bumped to 0.34**
 
 ---
