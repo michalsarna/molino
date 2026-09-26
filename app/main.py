@@ -164,7 +164,7 @@ async def download_stl(req: GenerateRequest):
     return Response(
         content=generate_stl(hm, p),
         media_type="application/octet-stream",
-        headers={"Content-Disposition": f"attachment; filename=molino_v{app.version}_carve.stl"},
+        headers={"Content-Disposition": f"attachment; filename=carve_molino_v{app.version}.stl"},
     )
 
 
@@ -177,5 +177,5 @@ async def download_gcode(req: GenerateRequest):
     return Response(
         content=generate_gcode(hm, p),
         media_type="text/plain",
-        headers={"Content-Disposition": f"attachment; filename=molino_v{app.version}_carve.gcode"},
+        headers={"Content-Disposition": f"attachment; filename=carve_molino_v{app.version}.gcode"},
     )
