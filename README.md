@@ -2,7 +2,10 @@
 
 > **Photo → CNC wood carving** — upload a photo, tune it, and get a G-code toolpath and STL model ready to carve.
 
-[![Live](https://img.shields.io/badge/version-0.33-amber)](https://github.com/michalsarna/molino)
+[![Live](https://img.shields.io/badge/version-0.34-amber)](https://github.com/michalsarna/molino)
+[![Tests](https://github.com/michalsarna/molino/actions/workflows/tests.yml/badge.svg)](https://github.com/michalsarna/molino/actions/workflows/tests.yml)
+[![Security](https://github.com/michalsarna/molino/actions/workflows/security.yml/badge.svg)](https://github.com/michalsarna/molino/actions/workflows/security.yml)
+[![CodeQL](https://github.com/michalsarna/molino/actions/workflows/codeql.yml/badge.svg)](https://github.com/michalsarna/molino/actions/workflows/codeql.yml)
 
 ## What it does
 
@@ -81,6 +84,16 @@ docker compose down             # stop
 - The container runs as an unprivileged user, has a `HEALTHCHECK` on `/api/info`, writes nothing to disk and needs no volumes.
 
 ## Security scanning
+
+[![Security](https://github.com/michalsarna/molino/actions/workflows/security.yml/badge.svg)](https://github.com/michalsarna/molino/actions/workflows/security.yml)
+[![CodeQL](https://github.com/michalsarna/molino/actions/workflows/codeql.yml/badge.svg)](https://github.com/michalsarna/molino/actions/workflows/codeql.yml)
+[![Dependabot](https://img.shields.io/badge/Dependabot-enabled-brightgreen?logo=dependabot)](https://github.com/michalsarna/molino/security/dependabot)
+
+The badges show the latest result on `master`. Where to read the details:
+
+- **Actions → security** — pip-audit, Bandit, Gitleaks, Hadolint and Trivy output per run (Trivy prints a table of any CVE found in the image, with installed vs fixed version).
+- **Security → Code scanning** — CodeQL alerts, each with the affected line and a suggested fix.
+- **Security → Dependabot** — vulnerable dependencies and the update PRs that resolve them.
 
 Free tooling runs on every push / PR and weekly (`.github/workflows/`):
 
