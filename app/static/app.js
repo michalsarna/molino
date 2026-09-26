@@ -756,8 +756,9 @@ function setupTag() {
   return `${num(p.width_mm)}x${num(p.height_mm)}${unit}_${tool}`;
 }
 
-btnDlStl.addEventListener("click",   () => downloadFile("/api/download/stl",   `molino_v${state.version}_${state.originalFileName}_carve.stl`));
-btnDlGcode.addEventListener("click", () => downloadFile("/api/download/gcode", `molino_v${state.version}_${state.originalFileName}_${setupTag()}.gcode`));
+// <image>_<size>_<tool>_molino_v<version>.ext — image first, setup next, generator last
+btnDlStl.addEventListener("click",   () => downloadFile("/api/download/stl",   `${state.originalFileName}_carve_molino_v${state.version}.stl`));
+btnDlGcode.addEventListener("click", () => downloadFile("/api/download/gcode", `${state.originalFileName}_${setupTag()}_molino_v${state.version}.gcode`));
 
 // ── Theme ──────────────────────────────────────────────────────────────────
 const themeBtn = document.getElementById("theme-toggle");

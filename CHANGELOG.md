@@ -4,6 +4,13 @@ Per-version history. Feature overview lives in [README.md](README.md).
 
 ---
 
+## v0.35
+
+- **Download file names reordered** — image name first, then size and tool, generator and version last: `photo_200x150mm_vbit60deg-3.175mm_molino_v0.35.gcode`, `photo_carve_molino_v0.35.stl`. Files from the same image now sort together in a folder
+- **Version bumped to 0.35**
+
+---
+
 ## v0.34
 
 - **Dependency refresh** — after the merged Dependabot PRs (FastAPI ≥ 0.141, uvicorn, Pillow ≥ 12.3, NumPy ≥ 2.5, pytest ≥ 9.1, `python:3.14-slim`, Actions on Node 24), this release closes the remaining gaps: uvicorn ≥ 0.54 and, above all, the **vendored Three.js is actually updated to r186 (0.186.1)** — Dependabot had bumped only the `package.json` pin while the served copy was still r157. Newer builds ship as `three.module.js` + `three.core.js`, both now vendored; the test that checks served assets covers the new file
